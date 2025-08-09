@@ -53,13 +53,6 @@ Deno.serve(async (req: Request) => {
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Build search conditions
-    const searchTerm = query.toLowerCase().trim();
-    let searchQuery = supabase
-      .from('assessments')
-      .select(`
-        id,
-        user_id,
     // Use RPC function for complex search
     const searchTerm = query.trim();
     const { data: assessments, error } = await supabase
