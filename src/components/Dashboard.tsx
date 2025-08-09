@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase, Assessment } from '../lib/supabase'
-import { LogOut, FileText, Clock, CheckCircle, RefreshCw } from 'lucide-react'
+import { LogOut, FileText, Clock, CheckCircle, RefreshCw, Heart } from 'lucide-react'
 
 interface DashboardProps {
   onLogout: () => void
