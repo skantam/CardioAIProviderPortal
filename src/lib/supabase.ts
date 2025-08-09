@@ -10,6 +10,7 @@ export type Provider = {
   user_id: string
   email: string
   full_name: string
+  license_number: string
   created_at: string
 }
 
