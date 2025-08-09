@@ -1,18 +1,32 @@
 import React, { useState, useEffect } from 'react'
 import { supabase, Assessment } from '../lib/supabase'
-import { LogOut, FileText, Clock, CheckCircle, RefreshCw, Heart } from 'lucide-react'
+import { LogOut, FileText, Clock, CheckCircle, RefreshCw, Heart, Search, Loader2 } from 'lucide-react'
 
 interface DashboardProps {
   onLogout: () => void
   onSelectAssessment: (assessmentId: string) => void
 }
 
+interface SearchResult {
+  id: string
+  user_id: string
+  risk_score: string
+  risk_category: string
+  timestamp: string
+  created_at: string
+  status: string
+  similarity: number
+}
 export default function Dashboard({ onLogout, onSelectAssessment }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'pending' | 'reviewed'>('pending')
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [loading, setLoading] = useState(true)
   const [provider, setProvider] = useState<any>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
 
   useEffect(() => {
     fetchProvider()
@@ -53,6 +67,54 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     }
     if (!refreshing) setLoading(false)
     setRefreshing(false)
+  }
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return
+
+    setSearching(true)
+    setShowSearchResults(true)
+
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-search`
+      const headers = {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query: searchQuery,
+          status: activeTab === 'pending' ? 'pending_review' : 'reviewed'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setSearchResults(data.results || [])
+    } catch (error) {
+      console.error('Search error:', error)
+      setSearchResults([])
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
+
+  const clearSearch = () => {
+    setSearchQuery('')
+    setSearchResults([])
+    setShowSearchResults(false)
   }
 
   const handleRefresh = async () => {
@@ -133,7 +195,10 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           <div className="border-b border-gray-200 bg-white rounded-t-xl shadow-sm">
             <nav className="-mb-px flex space-x-8">
               <button
-                onClick={() => setActiveTab('pending')}
+                onClick={() => {
+                  setActiveTab('pending')
+                  clearSearch()
+                }}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'pending'
                     ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
@@ -146,7 +211,10 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                 </div>
               </button>
               <button
-                onClick={() => setActiveTab('reviewed')}
+                onClick={() => {
+                  setActiveTab('reviewed')
+                  clearSearch()
+                }}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'reviewed'
                     ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
@@ -162,6 +230,111 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           </div>
         </div>
 
+        {/* Smart Search */}
+        <div className="mb-8 bg-blue-50 rounded-xl p-6 border border-blue-100">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-2 rounded-xl shadow-sm">
+              <Search className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Smart Search</h3>
+          </div>
+          
+          <div className="flex space-x-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Search assessments by symptoms, conditions, or patient details..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-900 bg-white shadow-sm"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={searching || !searchQuery.trim()}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-xl hover:from-blue-600 hover:to-teal-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center space-x-2 shadow-lg hover:shadow-xl"
+            >
+              {searching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Searching...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  <span>Search</span>
+                </>
+              )}
+            </button>
+            {showSearchResults && (
+              <button
+                onClick={clearSearch}
+                className="px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Search Results */}
+          {showSearchResults && (
+            <div className="mt-6">
+              <h4 className="text-md font-semibold text-gray-900 mb-3">Search Results</h4>
+              {searching ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">Searching assessments...</p>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
+                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">No similar assessments found</p>
+                  <p className="text-sm text-gray-500 mt-1">Try adjusting your search terms</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+                  {searchResults.map((result) => (
+                    <div
+                      key={result.id}
+                      onClick={() => onSelectAssessment(result.id)}
+                      className="p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 cursor-pointer transition-all duration-200"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h5 className="text-md font-semibold text-gray-900">
+                              {formatAssessmentId(result.id)}
+                            </h5>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold border ${getRiskColor(
+                                result.risk_category
+                              )}`}
+                            >
+                              {result.risk_category}
+                            </span>
+                            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium">
+                              {Math.round(result.similarity * 100)}% match
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <span className="font-medium">Risk Score: {result.risk_score}%</span>
+                            <span>
+                              Date: {new Date(result.timestamp || result.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-2 rounded-lg shadow-sm">
+                          <Heart className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         {/* Assessments List */}
         {loading ? (
           <div className="text-center py-12">
