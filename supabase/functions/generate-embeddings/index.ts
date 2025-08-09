@@ -36,7 +36,8 @@ Deno.serve(async (req: Request) => {
     const { data: assessments, error: fetchError } = await supabase
       .from('assessments')
       .select('*')
-      .is('embedding', null);
+      .is('embedding', null)
+      .limit(10);
 
     if (fetchError) {
       console.error('Error fetching assessments:', fetchError);
