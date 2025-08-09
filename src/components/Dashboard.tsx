@@ -324,8 +324,8 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                   <div className="mt-3 text-xs text-gray-400 max-w-md mx-auto">
                     <p className="mb-1">Examples:</p>
                     <p>• "chest pain" or "diabetes"</p>
-                    <p>• "risk score > 15%" or "score >= 20"</p>
-                    <p>• "date > August 3" or "after January 15"</p>
+                    <p>• "risk score &gt; 15%" or "score &gt;= 20"</p>
+                    <p>• "date &gt; August 3" or "after January 15"</p>
                     <p>• "high risk" or "low risk"</p>
                   </div>
                 </div>
