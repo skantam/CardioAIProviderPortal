@@ -38,8 +38,9 @@ Deno.serve(async (req: Request) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Perform text-based search on multiple fields
-    const { data: assessments, error } = await supabase
+    // Build search conditions
+    const searchTerm = query.toLowerCase().trim();
+    let searchQuery = supabase
       .from('assessments')
       .select(`
         id,
@@ -54,8 +55,41 @@ Deno.serve(async (req: Request) => {
         inputs,
         recommendations
       `)
-      .eq('status', status)
-      .or(`risk_category.ilike.%${query}%,overall_recommendation.ilike.%${query}%,provider_comments.ilike.%${query}%,risk_score.ilike.%${query}%`)
+      .eq('status', status);
+
+    // Check if query is a number (for risk score search)
+    const numericQuery = parseFloat(searchTerm);
+    if (!isNaN(numericQuery)) {
+      // Search by risk score (exact match or range)
+      searchQuery = searchQuery.or(`risk_score.eq.${numericQuery},risk_score.gte.${Math.max(0, numericQuery - 5)}.and.risk_score.lte.${Math.min(100, numericQuery + 5)}`);
+    } else if (searchTerm.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || searchTerm.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Date search - convert to ISO format for comparison
+      let searchDate;
+      if (searchTerm.includes('/')) {
+        const [month, day, year] = searchTerm.split('/');
+        searchDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      } else {
+        searchDate = searchTerm;
+      }
+      
+      // Search by date (both timestamp and created_at fields)
+      searchQuery = searchQuery.or(`timestamp.gte.${searchDate},created_at.gte.${searchDate}`);
+    } else {
+      // Text-based search on multiple fields
+      const textSearchConditions = [
+        `risk_category.ilike.%${searchTerm}%`,
+        `overall_recommendation.ilike.%${searchTerm}%`,
+        `provider_comments.ilike.%${searchTerm}%`
+      ];
+      
+      // Also search in JSON fields (inputs and recommendations)
+      textSearchConditions.push(`inputs::text.ilike.%${searchTerm}%`);
+      textSearchConditions.push(`recommendations::text.ilike.%${searchTerm}%`);
+      
+      searchQuery = searchQuery.or(textSearchConditions.join(','));
+    }
+
+    const { data: assessments, error } = await searchQuery
       .limit(5)
       .order('created_at', { ascending: false });
 
@@ -70,17 +104,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Add similarity score based on text matching
+    // Add similarity score based on search type and matches
     const resultsWithSimilarity = (assessments || []).map((result, index) => {
-      // Simple similarity calculation based on position and text matches
-      let similarity = 0.9 - (index * 0.1); // Decreasing similarity for later results
+      let similarity = 0.9 - (index * 0.1); // Base similarity decreasing by position
       
-      // Boost similarity if query matches risk_category exactly
-      if (result.risk_category && result.risk_category.toLowerCase().includes(query.toLowerCase())) {
-        similarity += 0.1;
+      // Boost similarity for exact matches
+      if (!isNaN(numericQuery)) {
+        // Risk score search
+        const riskScore = parseFloat(result.risk_score);
+        if (riskScore === numericQuery) {
+          similarity += 0.2; // Exact match bonus
+        } else if (Math.abs(riskScore - numericQuery) <= 5) {
+          similarity += 0.1; // Close match bonus
+        }
+      } else if (result.risk_category && result.risk_category.toLowerCase().includes(searchTerm)) {
+        similarity += 0.15; // Category match bonus
+      } else if (result.overall_recommendation && result.overall_recommendation.toLowerCase().includes(searchTerm)) {
+        similarity += 0.1; // Recommendation match bonus
       }
       
-      // Ensure similarity is between 0 and 1
+      // Ensure similarity is between 0.1 and 1.0
       similarity = Math.max(0.1, Math.min(1.0, similarity));
       
       return {
