@@ -60,54 +60,16 @@ Deno.serve(async (req: Request) => {
       .select(`
         id,
         user_id,
-        risk_score,
-        risk_category,
-        timestamp,
-        created_at,
-        status,
-        overall_recommendation,
-        provider_comments,
-        inputs,
-        recommendations
-      `)
-      .eq('status', status);
-
-    // Check if query is a number (for risk score search)
-    const numericQuery = parseFloat(searchTerm);
-    if (!isNaN(numericQuery)) {
-      // Search by risk score (exact match or range)
-      searchQuery = searchQuery.or(`risk_score.eq.${numericQuery},risk_score.gte.${Math.max(0, numericQuery - 5)}.and.risk_score.lte.${Math.min(100, numericQuery + 5)}`);
-    } else if (searchTerm.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || searchTerm.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      // Date search - convert to ISO format for comparison
-      let searchDate;
-      if (searchTerm.includes('/')) {
-        const [month, day, year] = searchTerm.split('/');
-        searchDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      } else {
-        searchDate = searchTerm;
-      }
-      
-      // Search by date (both timestamp and created_at fields)
-      searchQuery = searchQuery.or(`timestamp.gte.${searchDate},created_at.gte.${searchDate}`);
-    } else {
-      // Text-based search on multiple fields
-      const orConditions = [
-        `risk_category.ilike.%${searchTerm}%`,
-        `overall_recommendation.ilike.%${searchTerm}%`,
-        `provider_comments.ilike.%${searchTerm}%`,
-        `inputs::text.ilike.%${searchTerm}%`,
-        `recommendations::text.ilike.%${searchTerm}%`
-      ].join(',');
-      
-      searchQuery = searchQuery.or(orConditions);
-    }
-
-    const { data: assessments, error } = await searchQuery
-      .limit(5)
-      .order('created_at', { ascending: false });
+    // Use RPC function for complex search
+    const searchTerm = query.trim();
+    const { data: assessments, error } = await supabase
+      .rpc('search_assessments', {
+        p_search_term: searchTerm,
+        p_status: status
+      });
 
     if (error) {
-      console.error('Search error:', error);
+      console.error('RPC search error:', error);
       return new Response(
         JSON.stringify({ error: `Search failed: ${error.message}` }),
         {
@@ -122,6 +84,7 @@ Deno.serve(async (req: Request) => {
       let similarity = 0.9 - (index * 0.1); // Base similarity decreasing by position
       
       // Boost similarity for exact matches
+      const numericQuery = parseFloat(searchTerm);
       if (!isNaN(numericQuery)) {
         // Risk score search
         const riskScore = parseFloat(result.risk_score);
@@ -130,9 +93,9 @@ Deno.serve(async (req: Request) => {
         } else if (Math.abs(riskScore - numericQuery) <= 5) {
           similarity += 0.1; // Close match bonus
         }
-      } else if (result.risk_category && result.risk_category.toLowerCase().includes(searchTerm)) {
+      } else if (result.risk_category && result.risk_category.toLowerCase().includes(searchTerm.toLowerCase())) {
         similarity += 0.15; // Category match bonus
-      } else if (result.overall_recommendation && result.overall_recommendation.toLowerCase().includes(searchTerm)) {
+      } else if (result.overall_recommendation && result.overall_recommendation.toLowerCase().includes(searchTerm.toLowerCase())) {
         similarity += 0.1; // Recommendation match bonus
       }
       
