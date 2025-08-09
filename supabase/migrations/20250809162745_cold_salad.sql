@@ -1,80 +1,86 @@
 /*
-  # Create search function for assessments
+  # Add embeddings column and vector search functionality
 
-  1. New Functions
-    - `search_assessments` - PostgreSQL function to handle complex search queries
-      - Supports numeric search (risk scores with range matching)
-      - Supports date search (multiple formats)
-      - Supports text search across all relevant fields including JSONB
-      - Returns up to 5 results ordered by creation date
+  1. New Columns
+    - `embedding` (vector(384)) - stores text embeddings for similarity search
 
-  2. Security
-    - Function uses SECURITY DEFINER to run with elevated privileges
-    - Proper input validation and error handling
+  2. Indexes
+    - Vector similarity index for fast search
+
+  3. Functions
+    - `search_assessments_vector` - performs vector similarity search
+    - `get_user_email` - helper function to get user email from auth
 */
 
-CREATE OR REPLACE FUNCTION search_assessments(
-    p_search_term TEXT,
-    p_status TEXT
+-- Enable the vector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Add embedding column to assessments table
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'assessments' AND column_name = 'embedding'
+  ) THEN
+    ALTER TABLE assessments ADD COLUMN embedding vector(384);
+  END IF;
+END $$;
+
+-- Create index for vector similarity search
+CREATE INDEX IF NOT EXISTS assessments_embedding_idx ON assessments 
+USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Function to search assessments using vector similarity
+-- Function to search assessments using vector similarity
+CREATE OR REPLACE FUNCTION search_assessments_vector(
+  query_embedding vector(384),
+  similarity_threshold float DEFAULT 0.1,
+  match_count int DEFAULT 50
 )
-RETURNS SETOF assessments
+RETURNS TABLE (
+  id uuid,
+  user_id uuid,
+  risk_score text,
+  risk_category text,
+  assessment_timestamp timestamptz,  -- Changed from 'timestamp'
+  created_at timestamptz,
+  status text,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    a.id,
+    a.user_id,
+    a.risk_score,
+    a.risk_category,
+    a.timestamp AS assessment_timestamp,  -- Ensure column name matches
+    a.created_at,
+    a.status,
+    (1 - (a.embedding <=> query_embedding)) as similarity
+  FROM assessments a
+  WHERE a.embedding IS NOT NULL
+    AND (1 - (a.embedding <=> query_embedding)) > similarity_threshold
+  ORDER BY a.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
+-- Function to get user email from auth.users
+CREATE OR REPLACE FUNCTION get_user_email(user_uuid uuid)
+RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    search_pattern TEXT := '%' || LOWER(p_search_term) || '%';
-    numeric_query NUMERIC;
-    search_date DATE;
+  user_email text;
 BEGIN
-    -- Attempt to parse numeric query
-    BEGIN
-        numeric_query := p_search_term::NUMERIC;
-    EXCEPTION
-        WHEN invalid_text_representation THEN
-            numeric_query := NULL;
-    END;
-
-    -- Attempt to parse date query (MM/DD/YYYY or YYYY-MM-DD)
-    BEGIN
-        IF p_search_term LIKE '%/%/%' THEN
-            search_date := TO_DATE(p_search_term, 'MM/DD/YYYY');
-        ELSE
-            search_date := p_search_term::DATE;
-        END IF;
-    EXCEPTION
-        WHEN invalid_datetime_format THEN
-            search_date := NULL;
-        WHEN others THEN
-            search_date := NULL;
-    END;
-
-    RETURN QUERY
-    SELECT *
-    FROM assessments
-    WHERE
-        status = p_status
-        AND (
-            -- Numeric search (risk_score)
-            (numeric_query IS NOT NULL AND (
-                risk_score::NUMERIC = numeric_query OR
-                (risk_score::NUMERIC >= GREATEST(0, numeric_query - 5) AND risk_score::NUMERIC <= LEAST(100, numeric_query + 5))
-            ))
-            OR
-            -- Date search (timestamp or created_at)
-            (search_date IS NOT NULL AND (
-                DATE(timestamp) >= search_date OR DATE(created_at) >= search_date
-            ))
-            OR
-            -- Text-based search on multiple fields
-            (numeric_query IS NULL AND search_date IS NULL AND (
-                (LOWER(risk_category) LIKE search_pattern) OR
-                (LOWER(overall_recommendation) LIKE search_pattern) OR
-                (LOWER(provider_comments) LIKE search_pattern) OR
-                (LOWER(inputs::text) LIKE search_pattern) OR
-                (LOWER(recommendations::text) LIKE search_pattern)
-            ))
-        )
-    ORDER BY created_at DESC
-    LIMIT 5;
+  SELECT email INTO user_email
+  FROM auth.users
+  WHERE id = user_uuid;
+  
+  RETURN user_email;
 END;
 $$;
