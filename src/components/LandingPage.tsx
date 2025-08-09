@@ -10,7 +10,7 @@ export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
   const [showAuthForm, setShowAuthForm] = useState<'login' | 'signup' | null>(null)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-500 rounded-lg font-sans">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
