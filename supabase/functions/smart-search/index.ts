@@ -6,6 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+interface SearchRequest {
   assessment_timestamp: string;
   query: string;
   status: string;
