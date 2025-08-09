@@ -53,16 +53,25 @@ Deno.serve(async (req: Request) => {
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Use RPC function for complex search
-    const searchTerm = query.trim();
+    // Generate embedding for the search query
+    const model = new Supabase.ai.Session('gte-small');
+    const queryEmbedding = await model.run(query, { 
+      mean_pool: true, 
+      normalize: true 
+    });
+
+    console.log('Generated embedding for query:', query);
+
+    // Perform vector similarity search
     const { data: assessments, error } = await supabase
-      .rpc('search_assessments', {
-        p_search_term: searchTerm,
-        p_status: status
+      .rpc('search_assessments_vector', {
+        query_embedding: queryEmbedding,
+        similarity_threshold: 0.1,
+        match_count: 50
       });
 
     if (error) {
-      console.error('RPC search error:', error);
+      console.error('Vector search error:', error);
       return new Response(
         JSON.stringify({ error: `Search failed: ${error.message}` }),
         {
@@ -72,37 +81,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Add similarity score based on search type and matches
-    const resultsWithSimilarity = (assessments || []).map((result, index) => {
-      let similarity = 0.9 - (index * 0.1); // Base similarity decreasing by position
-      
-      // Boost similarity for exact matches
-      const numericQuery = parseFloat(searchTerm);
-      if (!isNaN(numericQuery)) {
-        // Risk score search
-        const riskScore = parseFloat(result.risk_score);
-        if (riskScore === numericQuery) {
-          similarity += 0.2; // Exact match bonus
-        } else if (Math.abs(riskScore - numericQuery) <= 5) {
-          similarity += 0.1; // Close match bonus
-        }
-      } else if (result.risk_category && result.risk_category.toLowerCase().includes(searchTerm.toLowerCase())) {
-        similarity += 0.15; // Category match bonus
-      } else if (result.overall_recommendation && result.overall_recommendation.toLowerCase().includes(searchTerm.toLowerCase())) {
-        similarity += 0.1; // Recommendation match bonus
-      }
-      
-      // Ensure similarity is between 0.1 and 1.0
-      similarity = Math.max(0.1, Math.min(1.0, similarity));
-      
-      return {
-        ...result,
-        similarity: parseFloat(similarity.toFixed(2))
-      };
-    });
+    // Filter by status if specified
+    const filteredAssessments = (assessments || []).filter(assessment => 
+      status === 'all' || assessment.status === status
+    );
+
+    console.log(`Found ${filteredAssessments.length} assessments matching query and status`);
 
     return new Response(
-      JSON.stringify({ results: resultsWithSimilarity }),
+      JSON.stringify({ results: filteredAssessments }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
