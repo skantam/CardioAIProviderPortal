@@ -57,7 +57,9 @@ function App() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center font-sans">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-4 rounded-2xl shadow-lg mx-auto mb-6 w-20 h-20 flex items-center justify-center">
+            <Heart className="w-8 h-8 text-white animate-pulse" />
+          </div>
           <p className="text-gray-600 font-medium">Loading...</p>
         </div>
       </div>
