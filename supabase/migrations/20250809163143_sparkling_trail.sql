@@ -41,7 +41,7 @@ RETURNS TABLE (
   user_id uuid,
   risk_score text,
   risk_category text,
-  timestamp timestamptz,
+  timestamp timestamptz DEFAULT now(),
   created_at timestamptz,
   status text,
   similarity float
