@@ -34,8 +34,8 @@ function parseSearchQuery(query: string): ParsedQuery {
     textQuery = textQuery.replace(riskScoreMatch[0], '').trim();
   }
 
-  // Parse date conditions (e.g., "date > August 3", "after January 15", "before 2024-01-01")
-  const dateRegex = /(?:date|created|assessment)\s*([><=]+)\s*([A-Za-z]+\s+\d{1,2}(?:,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})/gi;
+  // Parse date conditions (e.g., "date > August 3", "date = August 3", "after January 15", "before 2024-01-01")
+  const dateRegex = /(?:date|created|assessment)\s*([><=]+|=)\s*([A-Za-z]+\s+\d{1,2}(?:,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})/gi;
   const dateMatch = dateRegex.exec(query);
   if (dateMatch) {
     const operator = dateMatch[1];
@@ -102,8 +102,11 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
   return results.filter(result => {
     // Apply risk score filter
     if (filters.riskScore) {
-      const riskScore = parseFloat(result.risk_score);
+      const riskScoreStr = result.risk_score?.toString().replace('%', '') || '0';
+      const riskScore = parseFloat(riskScoreStr);
       const { operator, value } = filters.riskScore;
+      
+      console.log(`Comparing risk score: ${riskScore} ${operator} ${value}`);
       
       switch (operator) {
         case '>':
@@ -120,7 +123,7 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
           break;
         case '=':
         case '==':
-          if (riskScore !== value) return false;
+          if (Math.abs(riskScore - value) > 0.01) return false;
           break;
       }
     }
@@ -129,6 +132,8 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
     if (filters.date) {
       const assessmentDate = new Date(result.created_at);
       const { operator, value } = filters.date;
+      
+      console.log(`Comparing dates: ${assessmentDate.toDateString()} ${operator} ${value.toDateString()}`);
       
       switch (operator) {
         case '>':
@@ -142,6 +147,13 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
           break;
         case '<=':
           if (assessmentDate > value) return false;
+          break;
+        case '=':
+        case '==':
+          // For date equality, compare just the date part (ignore time)
+          const assessmentDateOnly = new Date(assessmentDate.getFullYear(), assessmentDate.getMonth(), assessmentDate.getDate());
+          const filterDateOnly = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+          if (assessmentDateOnly.getTime() !== filterDateOnly.getTime()) return false;
           break;
       }
     }
