@@ -91,12 +91,15 @@ Deno.serve(async (req: Request) => {
       searchQuery = searchQuery.or(`timestamp.gte.${searchDate},created_at.gte.${searchDate}`);
     } else {
       // Text-based search on multiple fields
-      searchQuery = searchQuery
-        .or(`risk_category.ilike.%${searchTerm}%`)
-        .or(`overall_recommendation.ilike.%${searchTerm}%`)
-        .or(`provider_comments.ilike.%${searchTerm}%`)
-        .or(`inputs::text.ilike.%${searchTerm}%`)
-        .or(`recommendations::text.ilike.%${searchTerm}%`);
+      const orConditions = [
+        `risk_category.ilike.%${searchTerm}%`,
+        `overall_recommendation.ilike.%${searchTerm}%`,
+        `provider_comments.ilike.%${searchTerm}%`,
+        `inputs::text.ilike.%${searchTerm}%`,
+        `recommendations::text.ilike.%${searchTerm}%`
+      ].join(',');
+      
+      searchQuery = searchQuery.or(orConditions);
     }
 
     const { data: assessments, error } = await searchQuery
