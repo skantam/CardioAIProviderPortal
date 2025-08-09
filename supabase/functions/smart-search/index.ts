@@ -38,72 +38,63 @@ Deno.serve(async (req: Request) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Generate embedding for the search query
-    try {
-      const model = new Supabase.ai.Session('gte-small');
-      const embedding = await model.run(query, { mean_pool: true, normalize: true });
+    // Perform text-based search on multiple fields
+    const { data: assessments, error } = await supabase
+      .from('assessments')
+      .select(`
+        id,
+        user_id,
+        risk_score,
+        risk_category,
+        timestamp,
+        created_at,
+        status,
+        overall_recommendation,
+        provider_comments,
+        inputs,
+        recommendations
+      `)
+      .eq('status', status)
+      .or(`risk_category.ilike.%${query}%,overall_recommendation.ilike.%${query}%,provider_comments.ilike.%${query}%,risk_score.ilike.%${query}%`)
+      .limit(5)
+      .order('created_at', { ascending: false });
 
-      // Perform vector similarity search
-      const { data: assessments, error } = await supabase.rpc('search_assessments', {
-        query_embedding: embedding,
-        match_threshold: 0.1,
-        match_count: 5,
-        filter_status: status
-      });
-
-      if (error) {
-        console.error('Search RPC error:', error);
-        return new Response(
-          JSON.stringify({ error: `Search RPC failed: ${error.message}` }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
+    if (error) {
+      console.error('Search error:', error);
       return new Response(
-        JSON.stringify({ results: assessments || [] }),
+        JSON.stringify({ error: `Search failed: ${error.message}` }),
         {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-
-    } catch (embeddingError) {
-      console.error('Embedding generation error:', embeddingError);
-      
-      // Fallback to text-based search if embedding fails
-      const { data: fallbackResults, error: fallbackError } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('status', status)
-        .or(`risk_category.ilike.%${query}%,overall_recommendation.ilike.%${query}%,provider_comments.ilike.%${query}%`)
-        .limit(5);
-
-      if (fallbackError) {
-        console.error('Fallback search error:', fallbackError);
-        return new Response(
-          JSON.stringify({ error: "Search failed" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      // Add similarity score of 0.5 for fallback results
-      const resultsWithSimilarity = (fallbackResults || []).map(result => ({
-        ...result,
-        similarity: 0.5
-      }));
-
-      return new Response(
-        JSON.stringify({ results: resultsWithSimilarity }),
-        {
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+
+    // Add similarity score based on text matching
+    const resultsWithSimilarity = (assessments || []).map((result, index) => {
+      // Simple similarity calculation based on position and text matches
+      let similarity = 0.9 - (index * 0.1); // Decreasing similarity for later results
+      
+      // Boost similarity if query matches risk_category exactly
+      if (result.risk_category && result.risk_category.toLowerCase().includes(query.toLowerCase())) {
+        similarity += 0.1;
+      }
+      
+      // Ensure similarity is between 0 and 1
+      similarity = Math.max(0.1, Math.min(1.0, similarity));
+      
+      return {
+        ...result,
+        similarity: parseFloat(similarity.toFixed(2))
+      };
+    });
+
+    return new Response(
+      JSON.stringify({ results: resultsWithSimilarity }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
 
   } catch (error) {
     console.error('Function error:', error);
