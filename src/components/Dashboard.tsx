@@ -96,11 +96,11 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-primary p-3 rounded-lg shadow-sm">
-                <FileText className="w-6 h-6 text-white" />
+              <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-3 rounded-xl shadow-lg">
+                <Heart className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Provider Dashboard</h1>
+                <h1 className="text-2xl font-bold text-gray-900">CardioAI Provider Dashboard</h1>
                 {provider && (
                   <p className="text-sm text-gray-600 mt-1">Welcome, {provider.full_name}</p>
                 )}
@@ -110,14 +110,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-primary hover:bg-blue-50 transition-colors rounded-lg disabled:opacity-50 font-medium"
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 transition-all rounded-xl disabled:opacity-50 font-medium"
               >
                 <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
                 <span>Refresh</span>
               </button>
               <button
                 onClick={onLogout}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors rounded-lg font-medium"
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all rounded-xl font-medium"
               >
                 <LogOut className="w-5 h-5" />
                 <span>Logout</span>
@@ -130,14 +130,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
         <div className="mb-8">
-          <div className="border-b border-gray-200 bg-white rounded-t-lg">
+          <div className="border-b border-gray-200 bg-white rounded-t-xl shadow-sm">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('pending')}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'pending'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-primary hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
+                    : 'border-transparent text-gray-500 hover:text-blue-600 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center space-x-2">
@@ -149,8 +149,8 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                 onClick={() => setActiveTab('reviewed')}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'reviewed'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-primary hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
+                    : 'border-transparent text-gray-500 hover:text-blue-600 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center space-x-2">
@@ -181,13 +181,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
             </p>
           </div>
         ) : (
-          <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+          <div className="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
             <div className="divide-y divide-gray-200">
               {assessments.map((assessment) => (
                 <div
                   key={assessment.id}
                   onClick={() => onSelectAssessment(assessment.id)}
-                  className="p-6 hover:bg-blue-50 cursor-pointer transition-all duration-200 hover:shadow-sm"
+                  className="p-6 hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 cursor-pointer transition-all duration-200 hover:shadow-sm"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
@@ -213,8 +213,8 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                         )}
                       </div>
                     </div>
-                    <div className="text-primary bg-blue-50 p-2 rounded-lg">
-                      <FileText className="w-6 h-6" />
+                    <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-2 rounded-xl shadow-sm">
+                      <Heart className="w-6 h-6 text-white" />
                     </div>
                   </div>
                 </div>

@@ -10,30 +10,30 @@ export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
   const [showAuthForm, setShowAuthForm] = useState<'login' | 'signup' | null>(null)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-500 rounded-lg font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 font-sans">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-primary p-3 rounded-lg shadow-sm">
+              <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-3 rounded-xl shadow-lg">
                 <Heart className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Cardio AI</h1>
+                <h1 className="text-3xl font-bold text-gray-900">CardioAI</h1>
                 <p className="text-sm text-gray-600 font-medium">Provider Portal</p>
               </div>
             </div>
             <div className="space-x-4">
               <button
                 onClick={() => setShowAuthForm('login')}
-                className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-sm hover:shadow-md h-12"
+                className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-teal-600 transition-all font-semibold shadow-lg hover:shadow-xl h-12"
               >
                 Login
               </button>
               <button
                 onClick={() => setShowAuthForm('signup')}
-                className="border-2 border-primary text-primary px-6 py-3 rounded-lg hover:bg-blue-50 transition-all font-semibold h-12"
+                className="border-2 border-blue-500 text-blue-600 px-6 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 transition-all font-semibold h-12"
               >
                 Sign Up
               </button>
@@ -55,13 +55,13 @@ export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
           <div className="flex justify-center space-x-4">
             <button
               onClick={() => setShowAuthForm('signup')}
-              className="bg-primary text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all font-semibold text-lg shadow-lg hover:shadow-xl h-14"
+              className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-blue-600 hover:to-teal-600 transition-all font-semibold text-lg shadow-lg hover:shadow-xl h-14"
             >
               Get Started
             </button>
             <button
               onClick={() => setShowAuthForm('login')}
-              className="border-2 border-primary text-primary px-8 py-4 rounded-lg hover:bg-blue-50 transition-all font-semibold text-lg h-14"
+              className="border-2 border-blue-500 text-blue-600 px-8 py-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 transition-all font-semibold text-lg h-14"
             >
               Login
             </button>
@@ -71,8 +71,8 @@ export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-            <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Shield className="w-8 h-8 text-primary" />
+            <div className="bg-gradient-to-br from-blue-500 to-teal-500 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Shield className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">
               Risk Assessment Review
@@ -83,8 +83,8 @@ export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
           </div>
 
           <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-            <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Users className="w-8 h-8 text-primary" />
+            <div className="bg-gradient-to-br from-blue-500 to-teal-500 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Users className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">
               Patient Management
@@ -95,7 +95,7 @@ export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
           </div>
 
           <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-            <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-gradient-to-br from-blue-500 to-teal-500 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
               <Heart className="w-8 h-8 text-primary" />
             </div>
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">

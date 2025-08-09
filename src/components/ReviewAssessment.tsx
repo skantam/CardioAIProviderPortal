@@ -152,13 +152,13 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
           <div className="flex items-center space-x-6">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 px-4 py-3 text-gray-900 hover:text-primary hover:bg-blue-50 transition-all rounded-lg font-medium h-12"
+              className="flex items-center space-x-2 px-4 py-3 text-gray-900 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 transition-all rounded-xl font-medium h-12"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Back to Dashboard</span>
             </button>
             <div className="flex items-center space-x-4">
-              <div className="bg-primary p-3 rounded-lg shadow-sm">
+              <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-3 rounded-xl shadow-lg">
                 <Heart className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -182,7 +182,7 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
             {/* Assessment Overview */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="bg-primary p-2 rounded-lg">
+                <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-2 rounded-xl shadow-sm">
                   <User className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -192,7 +192,7 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
               </div>
               
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-100">
                   <div className="flex items-center space-x-2 mb-2">
                     <Calendar className="w-4 h-4 text-gray-600" />
                     <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Assessment Date</span>
@@ -205,7 +205,7 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
                     })}
                   </p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-gray-50 to-teal-50 rounded-xl p-4 border border-gray-100">
                   <div className="flex items-center space-x-2 mb-2">
                     <Activity className="w-4 h-4 text-gray-600" />
                     <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Status</span>
@@ -238,7 +238,7 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
                   <div key={key} className="bg-gray-50 rounded-md px-3 py-2">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-gray-800 text-sm">{formatInputLabel(key)}</span>
-                      <span className="text-gray-800 text-sm font-medium bg-white px-2 py-1 rounded border border-gray-200">
+                      <span className="text-gray-800 text-sm font-medium bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm">
                         {formatInputValue(value)}
                       </span>
                     </div>
