@@ -69,19 +69,41 @@ Deno.serve(async (req: Request) => {
     for (const assessment of assessments) {
       try {
         // Create text representation of the assessment
-        const assessmentText = [
-          assessment.risk_category || '',
-          assessment.overall_recommendation || '',
-          assessment.provider_comments || '',
-          assessment.risk_score || '',
-          JSON.stringify(assessment.inputs || {}),
-          JSON.stringify(assessment.recommendations || {})
-        ].join(' ').trim();
+        const textParts = [];
+        
+        // Add risk information
+        if (assessment.risk_category) textParts.push(assessment.risk_category);
+        if (assessment.risk_score) textParts.push(`risk score ${assessment.risk_score}`);
+        
+        // Add recommendations
+        if (assessment.overall_recommendation) textParts.push(assessment.overall_recommendation);
+        if (assessment.provider_comments) textParts.push(assessment.provider_comments);
+        
+        // Add input data
+        if (assessment.inputs && typeof assessment.inputs === 'object') {
+          Object.entries(assessment.inputs).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+              textParts.push(`${key}: ${value}`);
+            }
+          });
+        }
+        
+        // Add recommendations array
+        if (assessment.recommendations && Array.isArray(assessment.recommendations)) {
+          assessment.recommendations.forEach((rec: any) => {
+            if (rec.category) textParts.push(rec.category);
+            if (rec.text) textParts.push(rec.text);
+          });
+        }
+
+        const assessmentText = textParts.join(' ').trim();
 
         if (!assessmentText) {
           console.log(`Skipping assessment ${assessment.id} - no text content`);
           continue;
         }
+
+        console.log(`Generating embedding for assessment ${assessment.id}`);
 
         // Generate embedding
         const embedding = await model.run(assessmentText, { 

@@ -72,10 +72,32 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const handleSearch = async () => {
     if (!searchQuery.trim()) return
 
+    console.log('Starting search for:', searchQuery)
     setSearching(true)
     setShowSearchResults(true)
 
     try {
+      // First, generate embeddings for any assessments that don't have them
+      console.log('Generating embeddings for assessments...')
+      const embeddingApiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-embeddings`
+      const embeddingHeaders = {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      }
+
+      const embeddingResponse = await fetch(embeddingApiUrl, {
+        method: 'POST',
+        headers: embeddingHeaders,
+        body: JSON.stringify({})
+      })
+
+      if (embeddingResponse.ok) {
+        const embeddingResult = await embeddingResponse.json()
+        console.log('Embedding generation result:', embeddingResult)
+      }
+
+      // Now perform the search
+      console.log('Performing search...')
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-search`
       const headers = {
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -96,6 +118,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       }
 
       const data = await response.json()
+      console.log('Search results:', data)
       setSearchResults(data.results || [])
     } catch (error) {
       console.error('Search error:', error)

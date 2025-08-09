@@ -32,15 +32,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log(`Search request - Query: "${query}", Status: "${status}"`);
+
     // Check for required environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing environment variables:', { 
-        hasUrl: !!supabaseUrl, 
-        hasServiceKey: !!supabaseServiceKey 
-      });
+      console.error('Missing environment variables');
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
         {
@@ -54,15 +53,16 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Generate embedding for the search query
+    console.log('Generating embedding for query...');
     const model = new Supabase.ai.Session('gte-small');
     const queryEmbedding = await model.run(query, { 
       mean_pool: true, 
       normalize: true 
     });
 
-    console.log('Generated embedding for query:', query);
+    console.log('Generated embedding, performing vector search...');
 
-    // Perform vector similarity search using the existing function
+    // Perform vector similarity search
     const { data: searchResults, error } = await supabase
       .rpc('search_assessments_vector', {
         query_embedding: queryEmbedding,
@@ -81,12 +81,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log(`Vector search returned ${searchResults?.length || 0} results`);
+
     // Filter by status if specified
     const filteredResults = (searchResults || []).filter(result => 
       status === 'all' || result.status === status
     );
 
-    console.log(`Found ${filteredResults.length} assessments matching query and status`);
+    console.log(`After status filtering: ${filteredResults.length} results`);
 
     return new Response(
       JSON.stringify({ results: filteredResults }),
