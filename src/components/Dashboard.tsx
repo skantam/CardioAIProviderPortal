@@ -269,7 +269,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Search assessments by symptoms, conditions, or patient details..."
+                placeholder="Search assessments by symptoms, conditions, patient details, or use filters like 'risk score > 10%' or 'date > August 3'"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-900 bg-white shadow-sm"
               />
             </div>
@@ -303,7 +303,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           {/* Search Results */}
           {showSearchResults && (
             <div className="mt-6">
-              <h4 className="text-md font-semibold text-gray-900 mb-3">Search Results</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-md font-semibold text-gray-900">Search Results</h4>
+                {!searching && searchResults.length > 0 && (
+                  <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                    {searchResults.length} found
+                  </span>
+                )}
+              </div>
               {searching ? (
                 <div className="text-center py-8">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
@@ -312,8 +319,15 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
               ) : searchResults.length === 0 ? (
                 <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
                   <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">No similar assessments found</p>
-                  <p className="text-sm text-gray-500 mt-1">Try adjusting your search terms</p>
+                  <p className="text-gray-600 font-medium">No matching assessments found</p>
+                  <p className="text-sm text-gray-500 mt-1">Try different search terms or filters</p>
+                  <div className="mt-3 text-xs text-gray-400 max-w-md mx-auto">
+                    <p className="mb-1">Examples:</p>
+                    <p>• "chest pain" or "diabetes"</p>
+                    <p>• "risk score > 15%" or "score >= 20"</p>
+                    <p>• "date > August 3" or "after January 15"</p>
+                    <p>• "high risk" or "low risk"</p>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
@@ -337,7 +351,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                               {result.risk_category}
                             </span>
                             <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium">
-                              {Math.round(result.similarity * 100)}% match
+                              {result.similarity < 1 ? `${Math.round(result.similarity * 100)}% match` : 'Filter match'}
                             </span>
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
