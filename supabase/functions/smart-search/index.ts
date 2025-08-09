@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 interface SearchRequest {
-  assessment_timestamp: string;
   query: string;
   status: string;
 }
@@ -63,8 +62,8 @@ Deno.serve(async (req: Request) => {
 
     console.log('Generated embedding for query:', query);
 
-    // Perform vector similarity search
-    const { data: assessments, error } = await supabase
+    // Perform vector similarity search using the existing function
+    const { data: searchResults, error } = await supabase
       .rpc('search_assessments_vector', {
         query_embedding: queryEmbedding,
         similarity_threshold: 0.1,
@@ -83,14 +82,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // Filter by status if specified
-    const filteredAssessments = (assessments || []).filter(assessment => 
-      status === 'all' || assessment.status === status
+    const filteredResults = (searchResults || []).filter(result => 
+      status === 'all' || result.status === status
     );
 
-    console.log(`Found ${filteredAssessments.length} assessments matching query and status`);
+    console.log(`Found ${filteredResults.length} assessments matching query and status`);
 
     return new Response(
-      JSON.stringify({ results: filteredAssessments }),
+      JSON.stringify({ results: filteredResults }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
@@ -99,7 +98,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ error: `Internal server error: ${error.message}` }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
