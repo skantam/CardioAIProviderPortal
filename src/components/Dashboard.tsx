@@ -12,7 +12,6 @@ interface SearchResult {
   user_id: string
   risk_score: string
   risk_category: string
-  timestamp: string
   created_at: string
   status: string
   similarity: number
@@ -58,7 +57,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       .from('assessments')
       .select('*')
       .eq('status', activeTab === 'pending' ? 'pending_review' : 'reviewed')
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching assessments:', error)
@@ -357,7 +356,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
                             <span className="font-medium">Risk Score: {result.risk_score}</span>
                             <span>
-                              Date: {new Date(result.assessment_timestamp || result.created_at).toLocaleDateString()}
+                              Date: {new Date(result.created_at).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
@@ -416,7 +415,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                       <div className="flex items-center space-x-6 text-sm text-gray-600">
                         <span className="font-medium">Risk Score: {assessment.risk_score}%</span>
                         <span>
-                          Created: {new Date(assessment.assessment_timestamp || assessment.created_at).toLocaleDateString()}
+                          Created: {new Date(assessment.created_at).toLocaleDateString()}
                         </span>
                         {assessment.overall_recommendation && (
                           <span className="font-medium">Recommendation: {assessment.overall_recommendation}</span>

@@ -198,7 +198,7 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
                     <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Assessment Date</span>
                   </div>
                   <p className="text-lg font-semibold text-gray-900">
-                    {new Date(assessment.assessment_timestamp || assessment.created_at).toLocaleDateString('en-US', {
+                    {new Date(assessment.created_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'

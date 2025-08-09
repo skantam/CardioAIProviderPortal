@@ -127,7 +127,7 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
 
     // Apply date filter
     if (filters.date) {
-      const assessmentDate = new Date(result.assessment_timestamp || result.created_at);
+      const assessmentDate = new Date(result.created_at);
       const { operator, value } = filters.date;
       
       switch (operator) {
@@ -241,7 +241,7 @@ Deno.serve(async (req: Request) => {
       const { data: allResults, error } = await supabase
         .from('assessments')
         .select('*')
-        .order('assessment_timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(100);
 
       if (error) {
@@ -279,8 +279,8 @@ Deno.serve(async (req: Request) => {
       if (parsedQuery.textQuery) {
         return (b.similarity || 0) - (a.similarity || 0);
       } else {
-        const dateA = new Date(a.assessment_timestamp || a.created_at);
-        const dateB = new Date(b.assessment_timestamp || b.created_at);
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
         return dateB.getTime() - dateA.getTime();
       }
     });
