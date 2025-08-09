@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
     if (error) {
       console.error('RPC search error:', error);
       return new Response(
-        JSON.stringify({ error: `Search failed: ${error.message}` }),
+        JSON.stringify({ error: \`Search failed: ${error.message}` }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -126,3 +126,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+      )
+  }
+}
+)
