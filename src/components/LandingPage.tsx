@@ -7,7 +7,11 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
-  const [showAuthForm, setShowAuthForm] = useState<'login' | 'signup' | null>(null)
+  const [showAuthForm, setShowAuthForm] = useState<'login' | 'signup' | 'forgot-password' | null>(null)
+
+  const handleModeChange = (mode: 'login' | 'signup' | 'forgot-password') => {
+    setShowAuthForm(mode)
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 font-sans">
@@ -117,6 +121,7 @@ export default function LandingPage({ onAuthSuccess }: LandingPageProps) {
             setShowAuthForm(null)
             onAuthSuccess()
           }}
+          onModeChange={handleModeChange}
         />
       )}
     </div>

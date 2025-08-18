@@ -103,7 +103,17 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
     // Apply risk score filter
     if (filters.riskScore) {
       const riskScoreStr = result.risk_score?.toString().replace('%', '') || '0';
-      const riskScore = parseFloat(riskScoreStr);
+      // Handle both percentage and decimal formats
+      let riskScore = parseFloat(riskScoreStr);
+      
+      // If the original had a %, treat as percentage, otherwise as decimal
+      if (result.risk_score?.toString().includes('%')) {
+        // Already a percentage value
+      } else if (riskScore < 1 && riskScore > 0) {
+        // Convert decimal to percentage (e.g., 0.15 -> 15)
+        riskScore = riskScore * 100;
+      }
+      
       const { operator, value } = filters.riskScore;
       
       console.log(`Comparing risk score: ${riskScore} ${operator} ${value}`);
@@ -123,7 +133,7 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
           break;
         case '=':
         case '==':
-          if (Math.abs(riskScore - value) > 0.01) return false;
+          if (Math.abs(riskScore - value) > 0.1) return false;
           break;
       }
     }
