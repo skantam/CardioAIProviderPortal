@@ -3,10 +3,9 @@ import { Heart, Shield, Brain, Activity, ArrowRight } from 'lucide-react'
 
 interface LandingPageProps {
   onStartAssessment: () => void
-}
 
 export default function LandingPage({ onStartAssessment }: LandingPageProps) {
-  return (
+export default function LandingPage({ onStartAssessment }: LandingPageProps) {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 font-sans">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
@@ -14,13 +13,6 @@ export default function LandingPage({ onStartAssessment }: LandingPageProps) {
           <div className="flex items-center justify-center">
             <div className="flex items-center space-x-4">
               <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-4 rounded-2xl shadow-lg">
-                <Heart className="w-8 h-8 text-white" />
-              </div>
-              <div className="text-center">
-                <h1 className="text-4xl font-bold text-gray-900">CardioAI</h1>
-                <p className="text-lg text-gray-600 font-medium">Cardiovascular Risk Assessment</p>
-              </div>
-            </div>
           </div>
         </div>
       </header>
