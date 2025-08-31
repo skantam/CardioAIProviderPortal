@@ -3,8 +3,10 @@ import { Heart, Shield, Brain, Activity, ArrowRight } from 'lucide-react'
 
 interface LandingPageProps {
   onStartAssessment: () => void
+}
 
 export default function LandingPage({ onStartAssessment }: LandingPageProps) {
+}
 export default function LandingPage({ onStartAssessment }: LandingPageProps) {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 font-sans">
       {/* Header */}
@@ -121,4 +123,5 @@ export default function LandingPage({ onStartAssessment }: LandingPageProps) {
       </main>
     </div>
   )
+}
 }
