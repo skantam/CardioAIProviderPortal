@@ -6,8 +6,7 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onStartAssessment }: LandingPageProps) {
-}
-export default function LandingPage({ onStartAssessment }: LandingPageProps) {
+  return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 font-sans">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
@@ -15,6 +14,9 @@ export default function LandingPage({ onStartAssessment }: LandingPageProps) {
           <div className="flex items-center justify-center">
             <div className="flex items-center space-x-4">
               <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-4 rounded-2xl shadow-lg">
+                <Heart className="w-8 h-8 text-white" />
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -123,5 +125,4 @@ export default function LandingPage({ onStartAssessment }: LandingPageProps) {
       </main>
     </div>
   )
-}
 }
