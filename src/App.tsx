@@ -2,56 +2,40 @@ import React, { useState, useEffect } from 'react'
 import { Heart } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import LandingPage from './components/LandingPage'
-import Dashboard from './components/Dashboard'
-import ReviewAssessment from './components/ReviewAssessment'
+import AssessmentChat from './components/AssessmentChat'
+import ResultsPage from './components/ResultsPage'
 
-type AppState = 'landing' | 'dashboard' | 'review'
+type AppState = 'landing' | 'assessment' | 'results'
 
 function App() {
   const [appState, setAppState] = useState<AppState>('landing')
-  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
+  const [assessmentId, setAssessmentId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    checkAuthState()
-  }, [])
-
-  const checkAuthState = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      setAppState('dashboard')
+    // Check if there's an existing session or assessment in progress
+    const savedAssessmentId = localStorage.getItem('currentAssessmentId')
+    if (savedAssessmentId) {
+      setAssessmentId(savedAssessmentId)
+      setAppState('assessment')
     }
     setLoading(false)
+  }, [])
 
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setAppState('dashboard')
-      } else {
-        setAppState('landing')
-        setSelectedAssessmentId(null)
-      }
-    })
+  const handleStartAssessment = () => {
+    setAppState('assessment')
   }
 
-  const handleAuthSuccess = () => {
-    setAppState('dashboard')
+  const handleAssessmentComplete = (id: string) => {
+    setAssessmentId(id)
+    setAppState('results')
+    localStorage.removeItem('currentAssessmentId')
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
+  const handleBackToStart = () => {
+    setAssessmentId(null)
     setAppState('landing')
-    setSelectedAssessmentId(null)
-  }
-
-  const handleSelectAssessment = (assessmentId: string) => {
-    setSelectedAssessmentId(assessmentId)
-    setAppState('review')
-  }
-
-  const handleBackToDashboard = () => {
-    setSelectedAssessmentId(null)
-    setAppState('dashboard')
+    localStorage.removeItem('currentAssessmentId')
   }
 
   if (loading) {
@@ -70,18 +54,18 @@ function App() {
   return (
     <>
       {appState === 'landing' && (
-        <LandingPage onAuthSuccess={handleAuthSuccess} />
+        <LandingPage onStartAssessment={handleStartAssessment} />
       )}
-      {appState === 'dashboard' && (
-        <Dashboard 
-          onLogout={handleLogout}
-          onSelectAssessment={handleSelectAssessment}
+      {appState === 'assessment' && (
+        <AssessmentChat 
+          onComplete={handleAssessmentComplete}
+          onBack={handleBackToStart}
         />
       )}
-      {appState === 'review' && selectedAssessmentId && (
-        <ReviewAssessment
-          assessmentId={selectedAssessmentId}
-          onBack={handleBackToDashboard}
+      {appState === 'results' && assessmentId && (
+        <ResultsPage
+          assessmentId={assessmentId}
+          onBackToStart={handleBackToStart}
         />
       )}
     </>
