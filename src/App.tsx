@@ -4,40 +4,54 @@ import { supabase } from './lib/supabase'
 import LandingPage from './components/LandingPage'
 import Dashboard from './components/Dashboard'
 import ReviewAssessment from './components/ReviewAssessment'
-import AssessmentChat from './components/AssessmentChat'
-import ResultsPage from './components/ResultsPage'
 
-type AppState = 'landing' | 'assessment' | 'results'
+type AppState = 'landing' | 'dashboard' | 'review'
 
 function App() {
   const [appState, setAppState] = useState<AppState>('landing')
-  const [assessmentId, setAssessmentId] = useState<string | null>(null)
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if there's an existing session or assessment in progress
-    const savedAssessmentId = localStorage.getItem('currentAssessmentId')
-    if (savedAssessmentId) {
-      setAssessmentId(savedAssessmentId)
-      setAppState('assessment')
-    }
-    setLoading(false)
+    checkAuthState()
   }, [])
 
-  const handleStartAssessment = () => {
-    setAppState('assessment')
+  const checkAuthState = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      setAppState('dashboard')
+    }
+    setLoading(false)
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setAppState('dashboard')
+      } else {
+        setAppState('landing')
+        setSelectedAssessmentId(null)
+      }
+    })
   }
 
-  const handleAssessmentComplete = (id: string) => {
-    setAssessmentId(id)
-    setAppState('results')
-    localStorage.removeItem('currentAssessmentId')
+  const handleAuthSuccess = () => {
+    setAppState('dashboard')
   }
 
-  const handleBackToStart = () => {
-    setAssessmentId(null)
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     setAppState('landing')
-    localStorage.removeItem('currentAssessmentId')
+    setSelectedAssessmentId(null)
+  }
+
+  const handleSelectAssessment = (assessmentId: string) => {
+    setSelectedAssessmentId(assessmentId)
+    setAppState('review')
+  }
+
+  const handleBackToDashboard = () => {
+    setSelectedAssessmentId(null)
+    setAppState('dashboard')
   }
 
   if (loading) {
@@ -56,18 +70,18 @@ function App() {
   return (
     <>
       {appState === 'landing' && (
-        <LandingPage onStartAssessment={handleStartAssessment} />
+        <LandingPage onAuthSuccess={handleAuthSuccess} />
       )}
-      {appState === 'assessment' && (
-        <AssessmentChat 
-          onComplete={handleAssessmentComplete}
-          onBack={handleBackToStart}
+      {appState === 'dashboard' && (
+        <Dashboard 
+          onLogout={handleLogout}
+          onSelectAssessment={handleSelectAssessment}
         />
       )}
-      {appState === 'results' && assessmentId && (
-        <ResultsPage
-          assessmentId={assessmentId}
-          onBackToStart={handleBackToStart}
+      {appState === 'review' && selectedAssessmentId && (
+        <ReviewAssessment
+          assessmentId={selectedAssessmentId}
+          onBack={handleBackToDashboard}
         />
       )}
     </>

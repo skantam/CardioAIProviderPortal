@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { supabase, Assessment } from '../lib/supabase'
 import { LogOut, FileText, Clock, CheckCircle, RefreshCw, Heart, Search, Loader2, Settings } from 'lucide-react'
 import AuthForm from './AuthForm'
-import AuthForm from './AuthForm'
 
 interface DashboardProps {
   onLogout: () => void
@@ -28,7 +27,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
-  const [showChangePassword, setShowChangePassword] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
 
   useEffect(() => {
@@ -195,13 +193,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowChangePassword(true)}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 transition-all rounded-xl font-medium"
-              >
-                <Settings className="w-5 h-5" />
-                <span>Settings</span>
-              </button>
               <button
                 onClick={() => setShowChangePassword(true)}
                 className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 transition-all rounded-xl font-medium"
@@ -450,17 +441,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           </div>
         )}
       </div>
-
-      {/* Change Password Modal */}
-      {showChangePassword && (
-        <AuthForm
-          mode="change-password"
-          onClose={() => setShowChangePassword(false)}
-          onSuccess={() => {
-            setShowChangePassword(false)
-          }}
-        />
-      )}
 
       {/* Change Password Modal */}
       {showChangePassword && (
