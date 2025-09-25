@@ -55,10 +55,34 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
 
   const fetchAssessments = async () => {
     if (!refreshing) setLoading(true)
+    
+    // Get current provider's country
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    const { data: providerData } = await supabase
+      .from('providers')
+      .select('country')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!providerData?.country) {
+      setLoading(false)
+      return
+    }
+
+    // Get assessments from users in the same country
     const { data, error } = await supabase
       .from('assessments')
-      .select('*')
+      .select(`
+        *,
+        users!inner(country)
+      `)
       .eq('status', activeTab === 'pending' ? 'pending_review' : 'reviewed')
+      .eq('users.country', providerData.country)
       .order('created_at', { ascending: false })
 
     if (error) {

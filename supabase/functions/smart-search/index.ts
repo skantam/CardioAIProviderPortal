@@ -223,6 +223,47 @@ Deno.serve(async (req: Request) => {
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get current user and their country
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Authorization header required" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { data: providerData } = await supabase
+      .from('providers')
+      .select('country')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!providerData?.country) {
+      return new Response(
+        JSON.stringify({ error: "Provider country not found" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     let searchResults: any[] = [];
 
     // If there's a text query, perform vector search
@@ -241,7 +282,8 @@ Deno.serve(async (req: Request) => {
         .rpc('search_assessments_vector', {
           query_embedding: queryEmbedding,
           similarity_threshold: 0.1,
-          match_count: 100
+          match_count: 100,
+          user_country: providerData.country
         });
 
       if (error) {
@@ -262,7 +304,11 @@ Deno.serve(async (req: Request) => {
       console.log('No text query, fetching all assessments for filtering...');
       const { data: allResults, error } = await supabase
         .from('assessments')
-        .select('*')
+        .select(`
+          *,
+          users!inner(country)
+        `)
+        .eq('users.country', providerData.country)
         .order('created_at', { ascending: false })
         .limit(100);
 
