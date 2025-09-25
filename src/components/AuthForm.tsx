@@ -84,6 +84,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
               email: authData.user.email,
               full_name: fullName,
               license_number: licenseNumber,
+             country: country,
               country: country,
             })
 
