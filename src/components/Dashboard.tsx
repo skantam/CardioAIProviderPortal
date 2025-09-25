@@ -56,7 +56,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const fetchAssessments = async () => {
     if (!refreshing) setLoading(true)
     
-    // Get current provider's country
+    // Get current provider's country from providers table
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       setLoading(false)
@@ -74,21 +74,32 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       return
     }
 
-    // Get assessments from users in the same country
+    // Get assessments where the assessment user's country matches provider's country
     const { data, error } = await supabase
       .from('assessments')
       .select(`
-        *,
-        users!inner(country)
+        *
       `)
       .eq('status', activeTab === 'pending' ? 'pending_review' : 'reviewed')
-      .eq('users.country', providerData.country)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching assessments:', error)
+      setAssessments([])
     } else {
-      setAssessments(data || [])
+      // Filter assessments by matching user countries with provider country
+      const filteredAssessments = []
+      
+      for (const assessment of data || []) {
+        // Get the user's country from auth.users
+        const { data: userData } = await supabase.auth.admin.getUserById(assessment.user_id)
+        
+        if (userData?.user?.user_metadata?.country === providerData.country) {
+          filteredAssessments.push(assessment)
+        }
+      }
+      
+      setAssessments(filteredAssessments)
     }
     if (!refreshing) setLoading(false)
     setRefreshing(false)

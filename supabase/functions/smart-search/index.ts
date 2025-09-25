@@ -283,7 +283,7 @@ Deno.serve(async (req: Request) => {
           query_embedding: queryEmbedding,
           similarity_threshold: 0.1,
           match_count: 100,
-          user_country: providerData.country
+          provider_country: providerData.country
         });
 
       if (error) {
@@ -300,15 +300,11 @@ Deno.serve(async (req: Request) => {
       searchResults = vectorResults || [];
       console.log(`Vector search returned ${searchResults.length} results`);
     } else {
-      // If no text query, get all assessments for filtering
+      // If no text query, get all assessments and filter by country
       console.log('No text query, fetching all assessments for filtering...');
       const { data: allResults, error } = await supabase
         .from('assessments')
-        .select(`
-          *,
-          users!inner(country)
-        `)
-        .eq('users.country', providerData.country)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -323,8 +319,19 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Add similarity score of 1.0 for non-vector results
-      searchResults = (allResults || []).map(result => ({ ...result, similarity: 1.0 }));
+      // Filter assessments by user country matching provider country
+      const filteredResults = []
+      
+      for (const assessment of allResults || []) {
+        // Get the user's country from auth.users
+        const { data: userData } = await supabase.auth.admin.getUserById(assessment.user_id)
+        
+        if (userData?.user?.user_metadata?.country === providerData.country) {
+          filteredResults.push({ ...assessment, similarity: 1.0 })
+        }
+      }
+      
+      searchResults = filteredResults
       console.log(`Fetched ${searchResults.length} assessments for filtering`);
     }
 
