@@ -103,7 +103,16 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         onSuccess()
       }
     } catch (error: any) {
-      setError(error.message)
+      if (mode === 'signup' && error.message === 'User already registered') {
+        setError('You already have an account with this email. Please log in instead.')
+        if (onModeChange) {
+          setTimeout(() => {
+            onModeChange('login')
+          }, 2000)
+        }
+      } else {
+        setError(error.message)
+      }
     } finally {
       setLoading(false)
     }
