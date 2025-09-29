@@ -79,52 +79,39 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           throw new Error('License number must be 4-20 alphanumeric characters')
         }
 
-        // Check if provider already exists first
-        const { data: existingProvider, error: providerCheckError } = await supabase
-          .from('providers')
-          .select('email')
-          .eq('email', email)
-          .maybeSingle()
-
-        if (providerCheckError) throw providerCheckError
-        if (existingProvider) {
-          throw new Error('User already registered')
-        }
-
-        // Try to sign up the user
+        // Sign up the user first
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
         })
 
         if (authError) {
-          if (authError.message.includes('User already registered')) {
-            throw new Error('User already registered')
-          }
           throw authError
         }
 
-        // Create provider record if auth user was created successfully
-        if (authData.user && !authData.user.identities?.length === false) {
+        // Check if user was actually created (not just confirmed)
+        if (authData.user) {
+          console.log('Auth user created:', authData.user.id)
+          
+          // Create provider record with the new user ID
           const { error: profileError } = await supabase
             .from('providers')
             .insert({
               user_id: authData.user.id,
-              email: authData.user.email || email,
+              email: email,
               full_name: fullName,
               license_number: licenseNumber,
               country: country,
             })
 
           if (profileError) {
-            console.error('Provider creation error:', profileError)
-            // If provider creation fails, we should clean up the auth user
-            // But since we can't delete auth users from client side, we'll just throw the error
-            throw new Error(`Failed to create provider profile: ${profileError.message}`)
+            console.error('Provider creation failed:', profileError)
+            throw new Error(`Provider creation error: ${profileError.message}`)
           }
-        } else if (authData.user && authData.user.identities?.length === 0) {
-          // User already exists in auth but not in providers table
-          throw new Error('User already registered')
+          
+          console.log('Provider record created successfully')
+        } else {
+          throw new Error('Failed to create user account')
         }
       } else {
         // Check if provider exists before attempting login
