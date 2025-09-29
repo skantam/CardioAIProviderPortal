@@ -102,9 +102,6 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
 
         console.log('Auth user created:', authData.user.id)
         
-        // Wait a moment for session to be established
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
         // Create provider record with the new user ID
         const { error: profileError } = await supabase
           .from('providers')
@@ -117,7 +114,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           }])
 
         if (profileError) {
-          console.error('Provider creation failed:', profileError);
+          console.error('Provider creation failed:', profileError)
           throw new Error(`Provider creation error: ${profileError.message}`)
         }
         
