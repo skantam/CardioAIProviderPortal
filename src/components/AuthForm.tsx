@@ -106,7 +106,6 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         const { error: profileError } = await supabase
           .from('providers')
           .insert([{
-            user_id: authData.user.id,
             email: email,
             full_name: fullName,
             license_number: licenseNumber,
