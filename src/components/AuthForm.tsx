@@ -103,14 +103,14 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         console.log('Auth user created:', authData.user.id)
         
         // Create provider record with the new user ID
-       const { error: profileError } = await supabase
-  .from('providers')
-  .insert([{
-    email: email,
-    full_name: fullName,
-    license_number: licenseNumber,
-    country: country,
-  }])
+        const { error: profileError } = await supabase
+          .from('providers')
+          .insert([{
+            email: email,
+            full_name: fullName,
+            license_number: licenseNumber,
+            country: country,
+          }])
 
         if (profileError) {
           console.error('Provider creation failed:', profileError)
