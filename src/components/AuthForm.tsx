@@ -89,6 +89,18 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           throw authError
         }
 
+        // Ensure the session is active and get the user ID from the session
+        // This is crucial to ensure the RLS policy (uid() = user_id) works
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session || !session.user) {
+            // This indicates a problem with the session after signup
+            // It might mean email confirmation is required and user is not immediately signed in
+            // Or a race condition where session is not yet available
+            console.error("Session not established after signup:", sessionError);
+            throw new Error("Failed to establish user session after signup. Please check email for verification or try again.");
+        }
+
         // Check if user was actually created (not just confirmed)
         if (authData.user) {
           console.log('Auth user created:', authData.user.id)
@@ -96,8 +108,8 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           // Create provider record with the new user ID
           const { error: profileError } = await supabase
             .from('providers')
-            .insert({
-              user_id: authData.user.id,
+            .insert([{
+              user_id: session.user.id, // Use the ID from the active session
               email: email,
               full_name: fullName,
               license_number: licenseNumber,
@@ -105,7 +117,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
             })
 
           if (profileError) {
-            console.error('Provider creation failed:', profileError)
+            console.error('Provider creation failed:', profileError);
             throw new Error(`Provider creation error: ${profileError.message}`)
           }
           
