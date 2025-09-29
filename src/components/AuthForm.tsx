@@ -80,6 +80,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         }
 
         // Check if provider already exists
+        const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
         })
@@ -94,7 +95,6 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
               email: authData.user.email,
               full_name: fullName,
               license_number: licenseNumber,
-             country: country,
               country: country,
             })
 
