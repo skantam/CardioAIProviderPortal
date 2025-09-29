@@ -114,7 +114,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
               full_name: fullName,
               license_number: licenseNumber,
               country: country,
-            })
+            }])
 
           if (profileError) {
             console.error('Provider creation failed:', profileError);
@@ -483,46 +483,46 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
 
           {(mode === 'login' || mode === 'signup' || mode === 'forgot-password') && (
             <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-              Email Address
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-900 h-12 bg-white transition-all"
-                placeholder="Enter your email address"
-                required
-              />
-            </div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-900 h-12 bg-white transition-all"
+                  placeholder="Enter your email address"
+                  required
+                />
+              </div>
             </div>
           )}
 
           {(mode === 'login' || mode === 'signup') && (
             <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-900 h-12 bg-white transition-all"
-                placeholder="Enter your password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-900 h-12 bg-white transition-all"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
           )}
 
@@ -563,25 +563,25 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         {/* Footer */}
         {(mode === 'login' || mode === 'signup') && (
           <div className="mt-6 text-center space-y-2">
-          <p className="text-sm text-gray-600">
-            {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => onModeChange && onModeChange(mode === 'login' ? 'signup' : 'login')}
-              className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
-            >
-              {mode === 'login' ? 'Sign up here' : 'Sign in here'}
-            </button>
-          </p>
-          {mode === 'login' && (
             <p className="text-sm text-gray-600">
+              {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
               <button
-                onClick={() => onModeChange && onModeChange('forgot-password')}
+                onClick={() => onModeChange && onModeChange(mode === 'login' ? 'signup' : 'login')}
                 className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
               >
-                Forgot your password?
+                {mode === 'login' ? 'Sign up here' : 'Sign in here'}
               </button>
             </p>
-          )}
+            {mode === 'login' && (
+              <p className="text-sm text-gray-600">
+                <button
+                  onClick={() => onModeChange && onModeChange('forgot-password')}
+                  className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                >
+                  Forgot your password?
+                </button>
+              </p>
+            )}
           </div>
         )}
       </div>
