@@ -80,16 +80,6 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         }
 
         // Check if provider already exists
-        const { data: existingProvider, error: checkError } = await supabase
-          .from('providers')
-          .select('email')
-          .eq('email', email)
-          .maybeSingle()
-
-        if (checkError) throw checkError
-        if (existingProvider) throw new Error('Provider already registered with this email')
-
-        const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
         })
