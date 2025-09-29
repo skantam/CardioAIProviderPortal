@@ -67,7 +67,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       .from('providers')
       .select('country')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!providerData?.country) {
       setLoading(false)

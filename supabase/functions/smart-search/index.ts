@@ -252,7 +252,7 @@ Deno.serve(async (req: Request) => {
       .from('providers')
       .select('country')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle()
 
     if (!providerData?.country) {
       return new Response(
