@@ -37,6 +37,16 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
 
     try {
       if (mode === 'forgot-password') {
+        // Check if provider exists
+        const { data: provider, error: providerError } = await supabase
+          .from('providers')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle()
+
+        if (providerError) throw providerError
+        if (!provider) throw new Error('No provider account found with this email address')
+
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         })
@@ -69,6 +79,16 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           throw new Error('License number must be 4-20 alphanumeric characters')
         }
 
+        // Check if provider already exists
+        const { data: existingProvider, error: checkError } = await supabase
+          .from('providers')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle()
+
+        if (checkError) throw checkError
+        if (existingProvider) throw new Error('Provider already registered with this email')
+
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
@@ -91,6 +111,16 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           if (profileError) throw profileError
         }
       } else {
+        // Check if provider exists before attempting login
+        const { data: provider, error: providerError } = await supabase
+          .from('providers')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle()
+
+        if (providerError) throw providerError
+        if (!provider) throw new Error('No provider account found with this email address')
+
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -103,7 +133,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         onSuccess()
       }
     } catch (error: any) {
-      if (mode === 'signup' && error.message === 'User already registered') {
+      if (mode === 'signup' && (error.message.includes('User already registered') || error.message.includes('Provider already registered'))) {
         setError('You already have an account with this email. Please log in instead.')
         if (onModeChange) {
           setTimeout(() => {

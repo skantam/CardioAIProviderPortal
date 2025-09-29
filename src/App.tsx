@@ -19,14 +19,42 @@ function App() {
   const checkAuthState = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
-      setAppState('dashboard')
+      // Check if user has a provider record
+      const { data: provider } = await supabase
+        .from('providers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+      
+      if (provider) {
+        setAppState('dashboard')
+      } else {
+        // No provider record, sign out
+        await supabase.auth.signOut()
+        setAppState('landing')
+      }
+    } else {
+      setAppState('landing')
     }
     setLoading(false)
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        setAppState('dashboard')
+        // Check if user has a provider record
+        const { data: provider } = await supabase
+          .from('providers')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+        
+        if (provider) {
+          setAppState('dashboard')
+        } else {
+          // No provider record, sign out
+          await supabase.auth.signOut()
+          setAppState('landing')
+        }
       } else {
         setAppState('landing')
         setSelectedAssessmentId(null)

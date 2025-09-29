@@ -49,6 +49,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle()
+      
+      if (!data) {
+        // If no provider record found, sign out the user
+        await supabase.auth.signOut()
+        return
+      }
+      
       setProvider(data)
     }
   }
