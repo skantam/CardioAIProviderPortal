@@ -79,38 +79,50 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           throw new Error('License number must be 4-20 alphanumeric characters')
         }
 
-        // Check if provider already exists
-        const { data: existingProvider, error: providerCheckError } = await supabase
-          .from('providers')
-          .select('email')
-          .eq('email', email)
-          .maybeSingle()
-
-        if (providerCheckError) throw providerCheckError
-        if (existingProvider) {
-          throw new Error('User already registered')
-        }
-
-        // Check if provider already exists
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-        })
-
-        if (authError) throw authError
-
-        if (authData.user) {
-          const { error: profileError } = await supabase
+        try {
+          // Check if provider already exists
+          const { data: existingProvider, error: providerCheckError } = await supabase
             .from('providers')
-            .insert({
-              user_id: authData.user.id,
-              email: authData.user.email,
-              full_name: fullName,
-              license_number: licenseNumber,
-              country: country,
-            })
+            .select('email')
+            .eq('email', email)
+            .maybeSingle()
 
-          if (profileError) throw profileError
+          if (providerCheckError) throw providerCheckError
+          if (existingProvider) {
+            throw new Error('User already registered')
+          }
+
+          // Try to sign up the user
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email,
+            password,
+          })
+
+          if (authError) {
+            if (authError.message.includes('User already registered')) {
+              throw new Error('User already registered')
+            }
+            throw authError
+          }
+
+          if (authData.user) {
+            const { error: profileError } = await supabase
+              .from('providers')
+              .insert({
+                user_id: authData.user.id,
+                email: authData.user.email,
+                full_name: fullName,
+                license_number: licenseNumber,
+                country: country,
+              })
+
+            if (profileError) throw profileError
+          }
+        } catch (error: any) {
+          if (error.message.includes('User already registered')) {
+            throw new Error('User already registered')
+          }
+          throw error
         }
       } else {
         // Check if provider exists before attempting login
