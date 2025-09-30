@@ -103,29 +103,31 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         console.log('Auth user created:', authData.user.id)
 
         // Wait for session to become active
-      let session = supabase.auth.session();
+      let { data: { session } } = await supabase.auth.getSession();
+
       const timeout = Date.now() + 5000;
       while (!session && Date.now() < timeout) {
         await new Promise(r => setTimeout(r, 100));
-        session = supabase.auth.session();
+        ({ data: { session } } = await supabase.auth.getSession());
       }
+      
       if (!session) throw new Error('Session not active yet');
         
-        // Create provider record with the new user ID
-        const { error: profileError } = await supabase
+                const { error: profileError } = await supabase
           .from('providers')
           .insert([{
-            user_id: authData.user.id,
+            user_id: session.user.id,   // use session.user.id, not just authData.user.id
             email: email,
             full_name: fullName,
             license_number: licenseNumber,
             country: country,
-          }])
-
+          }]);
+        
         if (profileError) {
-          console.error('Provider creation failed:', profileError)
-          throw new Error(`Provider creation error: ${profileError.message}`)
+          console.error('Provider creation failed:', profileError);
+          throw new Error(`Provider creation error: ${profileError.message}`);
         }
+        
         
         console.log('Provider record created successfully')
       } else {
