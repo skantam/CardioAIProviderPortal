@@ -63,50 +63,39 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const fetchAssessments = async () => {
     if (!refreshing) setLoading(true)
     
-    // Get current provider's country from providers table
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setLoading(false)
-      return
-    }
+    try {
+      // Use the smart-search Edge Function to fetch filtered assessments
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setLoading(false)
+        return
+      }
 
-    const { data: providerData } = await supabase
-      .from('providers')
-      .select('country')
-      .eq('user_id', user.id)
-      .maybeSingle()
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-search`
+      const headers = {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      }
 
-    if (!providerData?.country) {
-      setLoading(false)
-      return
-    }
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query: '',
+          status: activeTab === 'pending' ? 'pending_review' : 'reviewed',
+          fetch_all: true
+        })
+      })
 
-    // Get assessments where the assessment user's country matches provider's country
-    const { data, error } = await supabase
-      .from('assessments')
-      .select(`
-        *
-      `)
-      .eq('status', activeTab === 'pending' ? 'pending_review' : 'reviewed')
-      .order('created_at', { ascending: false })
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assessments: ${response.status}`)
+      }
 
-    if (error) {
+      const data = await response.json()
+      setAssessments(data.results || [])
+    } catch (error) {
       console.error('Error fetching assessments:', error)
       setAssessments([])
-    } else {
-      // Filter assessments by matching user countries with provider country
-      const filteredAssessments = []
-      
-      for (const assessment of data || []) {
-        // Get the user's country from auth.users
-        const { data: userData } = await supabase.auth.admin.getUserById(assessment.user_id)
-        
-        if (userData?.user?.user_metadata?.country === providerData.country) {
-          filteredAssessments.push(assessment)
-        }
-      }
-      
-      setAssessments(filteredAssessments)
     }
     if (!refreshing) setLoading(false)
     setRefreshing(false)
@@ -122,9 +111,15 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     try {
       // First, generate embeddings for any assessments that don't have them
       console.log('Generating embeddings for assessments...')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setSearching(false)
+        return
+      }
+
       const embeddingApiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-embeddings`
       const embeddingHeaders = {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       }
 
@@ -143,7 +138,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       console.log('Performing search...')
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-search`
       const headers = {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       }
 

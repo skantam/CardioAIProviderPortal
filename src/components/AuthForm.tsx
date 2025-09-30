@@ -86,7 +86,8 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           options: {
             emailRedirectTo: undefined,
             data: {
-              email_confirm: false
+              email_confirm: false,
+              country: country
             }
           }
         })
