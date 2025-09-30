@@ -118,16 +118,6 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
 
       console.log('Provider record created successfully');
       } else {
-        // Check if provider exists before attempting login
-        const { data: provider, error: providerError } = await supabase
-          .from('providers')
-          .select('email')
-          .eq('email', email)
-          .maybeSingle()
-
-        if (providerError) throw providerError
-        if (!provider) throw new Error('No provider account found with this email address')
-
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
