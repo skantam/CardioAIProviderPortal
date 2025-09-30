@@ -100,9 +100,9 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
           throw new Error('Failed to create user account')
         }
 
-        console.log('Auth user created:', authData.user.id)
+        console.log('Auth user created:', authData.user.id);
 
-              / Immediately create provider row via RPC
+              // Immediately create provider row via RPC
       const { error: providerError } = await supabase.rpc('create_provider', {
         p_user: authData.user.id,
         p_email: email,
