@@ -274,7 +274,7 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
-
+   console.log('providerCountry: ', providerCountry);
     let searchResults: any[] = [];
 
     // If there's a text query, perform vector search
