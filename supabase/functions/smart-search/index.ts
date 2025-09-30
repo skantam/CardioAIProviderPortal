@@ -252,16 +252,19 @@ Deno.serve(async (req: Request) => {
       .from('providers')
       .select('country')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .single()
 
-    // Use provider country if available, otherwise fall back to user metadata
-    let providerCountry = providerData?.country;
-    
-    if (!providerCountry) {
-      // Fallback to user metadata country
-      providerCountry = user.user_metadata?.country;
+    if (!providerData) {
+      return new Response(
+        JSON.stringify({ error: "Provider record not found" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
     
+    const providerCountry = providerData.country;
     if (!providerCountry) {
       return new Response(
         JSON.stringify({ error: "Provider country not found" }),
@@ -286,7 +289,7 @@ Deno.serve(async (req: Request) => {
       console.log('Generated embedding, performing vector search...');
 
       // Perform vector similarity search
-      const { data: vectorResults, error } = await supabase
+      const { data: vectorResults, error: vectorError } = await supabase
         .rpc('search_assessments_vector', {
           query_embedding: queryEmbedding,
           similarity_threshold: 0.1,
@@ -294,10 +297,10 @@ Deno.serve(async (req: Request) => {
         });
         
       
-      if (error) {
-        console.error('Vector search error:', error);
+      if (vectorError) {
+        console.error('Vector search error:', vectorError);
         return new Response(
-          JSON.stringify({ error: `Search failed: ${error.message}` }),
+          JSON.stringify({ error: `Search failed: ${vectorError.message}` }),
           {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -313,7 +316,8 @@ Deno.serve(async (req: Request) => {
       console.log('No text query, fetching all assessments for filtering...');
       const { data: allResults, error } = await supabase
         .from('assessments')
-        .select('*, usercountry')
+        .select('*')
+        .eq('usercountry', providerCountry)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -328,10 +332,8 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Filter assessments by matching usercountry with provider country
-      searchResults = (allResults || []).filter(assessment => 
-        assessment.usercountry === providerCountry
-      ).map(assessment => ({ ...assessment, similarity: 1.0 }));
+      // Map results with similarity score
+      searchResults = (allResults || []).map(assessment => ({ ...assessment, similarity: 1.0 }));
       
       console.log(`Fetched ${searchResults.length} assessments for filtering`);
     }

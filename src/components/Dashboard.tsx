@@ -81,13 +81,15 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         method: 'POST',
         headers,
         body: JSON.stringify({
-          query: '*',
+          query: '',
           status: activeTab === 'pending' ? 'pending_review' : 'reviewed',
           fetch_all: true
         })
       })
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
         throw new Error(`Failed to fetch assessments: ${response.status}`)
       }
 
