@@ -254,7 +254,15 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (!providerData?.country) {
+    // Use provider country if available, otherwise fall back to user metadata
+    let providerCountry = providerData?.country;
+    
+    if (!providerCountry) {
+      // Fallback to user metadata country
+      providerCountry = user.user_metadata?.country;
+    }
+    
+    if (!providerCountry) {
       return new Response(
         JSON.stringify({ error: "Provider country not found" }),
         {
@@ -283,7 +291,7 @@ Deno.serve(async (req: Request) => {
           query_embedding: queryEmbedding,
           similarity_threshold: 0.1,
           match_count: 100,
-          provider_country: providerData.country
+          provider_country: providerCountry
         });
 
       if (error) {
@@ -326,7 +334,7 @@ Deno.serve(async (req: Request) => {
         // Get the user's country from auth.users
         const { data: userData } = await supabase.auth.admin.getUserById(assessment.user_id)
         
-        if (userData?.user?.user_metadata?.country === providerData.country) {
+        if (userData?.user?.user_metadata?.country === providerCountry) {
           filteredResults.push({ ...assessment, similarity: 1.0 })
         }
       }
