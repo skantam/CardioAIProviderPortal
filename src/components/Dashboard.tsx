@@ -81,7 +81,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         method: 'POST',
         headers,
         body: JSON.stringify({
-          query: '*',
+          query: '',
           status: activeTab === 'pending' ? 'pending_review' : 'reviewed',
           fetch_all: true
         })
