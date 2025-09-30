@@ -189,9 +189,9 @@ Deno.serve(async (req: Request) => {
   try {
     const { query, status }: SearchRequest = await req.json();
 
-    if (!query || !status) {
+    if (status === undefined || status === null || status === '') {
       return new Response(
-        JSON.stringify({ error: "Query and status are required" }),
+        JSON.stringify({ error: "Status is required" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -199,10 +199,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`Search request - Query: "${query}", Status: "${status}"`);
+    console.log(`Search request - Query: "${query || ''}", Status: "${status}"`);
 
     // Parse the query to extract filters and text search
-    const parsedQuery = parseSearchQuery(query);
+    const parsedQuery = parseSearchQuery(query || '');
     console.log('Parsed query:', parsedQuery);
 
     // Check for required environment variables
