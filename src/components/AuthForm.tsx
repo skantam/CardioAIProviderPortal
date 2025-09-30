@@ -113,7 +113,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
       
       if (providerError) {
         console.error('Provider creation failed:', providerError);
-        throw new Error(`Provider creation error: ${providerError.message}`);
+        throw new Error('Provider creation error: ${providerError.message}');
       }
 
       console.log('Provider record created successfully');
