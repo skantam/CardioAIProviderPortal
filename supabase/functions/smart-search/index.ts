@@ -316,8 +316,9 @@ Deno.serve(async (req: Request) => {
       console.log('No text query, fetching all assessments for filtering...');
       const { data: allResults, error } = await supabase
         .from('assessments')
-        .select('*')
+        .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, usercountry')
         .eq('usercountry', providerCountry)
+        .eq('status', status)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -332,36 +333,32 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Map results with similarity score
-      searchResults = (allResults || []).map(assessment => ({ ...assessment, similarity: 1.0 }));
+      // Map results with similarity score for consistency with vector search
+      searchResults = (allResults || []).map(assessment => ({ 
+        ...assessment, 
+        similarity: 1.0 
+      }));
       
       console.log(`Fetched ${searchResults.length} assessments for filtering`);
     }
 
-    // Apply numerical and date filters
-    if (Object.keys(parsedQuery.filters).length > 0) {
+    // Apply numerical and date filters (only needed for text searches with filters)
+    if (parsedQuery.textQuery && Object.keys(parsedQuery.filters).length > 0) {
       console.log('Applying filters:', parsedQuery.filters);
       searchResults = applyFilters(searchResults, parsedQuery.filters);
       console.log(`After filtering: ${searchResults.length} results`);
     }
 
-    // Filter by status
-    const filteredResults = searchResults.filter(result => 
-      status === 'all' || result.status === status
-    );
+    // Results are already filtered by status in the database query
+    const filteredResults = searchResults;
+    console.log(`Final results: ${filteredResults.length} assessments`);
 
-    console.log(`After status filtering: ${filteredResults.length} results`);
-
-    // Sort by similarity (if vector search was used) or by date
-    filteredResults.sort((a, b) => {
-      if (parsedQuery.textQuery) {
+    // Sort by similarity for vector search results (database results are already sorted by date)
+    if (parsedQuery.textQuery) {
+      filteredResults.sort((a, b) => {
         return (b.similarity || 0) - (a.similarity || 0);
-      } else {
-        const dateA = new Date(a.created_at);
-        const dateB = new Date(b.created_at);
-        return dateB.getTime() - dateA.getTime();
-      }
-    });
+      });
+    }
 
     return new Response(
       JSON.stringify({ 
