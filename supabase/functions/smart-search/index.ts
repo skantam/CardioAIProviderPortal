@@ -290,10 +290,11 @@ Deno.serve(async (req: Request) => {
         .rpc('search_assessments_vector', {
           query_embedding: queryEmbedding,
           similarity_threshold: 0.1,
-          match_count: 100,
-          provider_country: providerCountry
+          match_count: 100
+          //provider_country: providerCountry
         });
-
+        
+      
       if (error) {
         console.error('Vector search error:', error);
         return new Response(
@@ -306,6 +307,7 @@ Deno.serve(async (req: Request) => {
       }
 
       searchResults = vectorResults || [];
+      searchResults = vectorResults.filter(r => r.provider_country === providerCountry);
       console.log(`Vector search returned ${searchResults.length} results`);
     } else {
       // If no text query, get all assessments and filter by country
