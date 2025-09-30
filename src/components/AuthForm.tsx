@@ -102,6 +102,22 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
 
         console.log('Auth user created:', authData.user.id)
 
+              / Immediately create provider row via RPC
+      const { error: providerError } = await supabase.rpc('create_provider', {
+        p_user: authData.user.id,
+        p_email: email,
+        p_full_name: fullName,
+        p_license_number: licenseNumber,
+        p_country: country
+      });
+      
+      if (providerError) {
+        console.error('Provider creation failed:', providerError);
+        throw new Error(`Provider creation error: ${providerError.message}`);
+      }
+
+      console.log('Provider record created successfully');
+/*
         // Wait for session to become active
       let { data: { session } } = await supabase.auth.getSession();
 
@@ -129,7 +145,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         }
         
         
-        console.log('Provider record created successfully')
+        console.log('Provider record created successfully') */
       } else {
         // Check if provider exists before attempting login
         const { data: provider, error: providerError } = await supabase
