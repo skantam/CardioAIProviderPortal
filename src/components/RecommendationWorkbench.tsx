@@ -215,7 +215,7 @@ const webhookResponse = await fetch(
     headers: {
       'Content-Type': 'application/json',
       // Optional: include auth if your function requires it
-      // 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify(webhookPayload),
   }
