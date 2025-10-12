@@ -194,7 +194,7 @@ export default function RecommendationWorkbench({
       }
 
       // Send webhook notification
-      /*
+      
       const webhookResponse = await fetch('https://skantam.app.n8n.cloud/webhook/notifyuser', {
         method: 'POST',
         headers: {
@@ -206,8 +206,9 @@ export default function RecommendationWorkbench({
       if (!webhookResponse.ok) {
         throw new Error(`Webhook failed with status: ${webhookResponse.status}`)
       }
-      */
+      
       // Send notification via Supabase Edge Function
+      /*
 const webhookResponse = await fetch(
   import.meta.env.VITE_EDGE_FN_URL,
   {
@@ -227,7 +228,7 @@ if (!webhookResponse.ok) {
 
 const result = await webhookResponse.json();
 console.log('✅ Supabase Edge Function response:', result);
-
+*/
 
       // Update status to reviewed after successful webhook
       const { error: statusError } = await supabase
