@@ -41,7 +41,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
         const { data: provider, error: providerError } = await supabase
           .from('providers')
           .select('email')
-          .eq('email', email)
+          .ilike('email', email)
           .maybeSingle()
 
         if (providerError) throw providerError
