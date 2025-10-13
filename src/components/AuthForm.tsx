@@ -37,21 +37,18 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
 
     try {
       if (mode === 'forgot-password') {
-        // Check if provider exists
-        const { data: provider, error: providerError } = await supabase
-          .from('providers')
-          .select('email')
-          .ilike('email', email)
-          .maybeSingle()
-
-        if (providerError) throw providerError
-        if (!provider) throw new Error('No provider account found with this email address')
-
+        // Send password reset email directly - Supabase will handle validation
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         })
 
-        if (error) throw error
+        if (error) {
+          // If the error is about user not found, provide a more helpful message
+          if (error.message.includes('User not found') || error.message.includes('not found')) {
+            throw new Error('No provider account found with this email address')
+          }
+          throw error
+        }
 
         setMessage('Password reset email sent! Check your inbox.')
       } else if (mode === 'change-password') {
