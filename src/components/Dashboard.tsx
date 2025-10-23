@@ -32,13 +32,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   useEffect(() => {
     fetchProvider()
     fetchAssessments()
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      fetchAssessments()
-    }, 30000)
-    
-    return () => clearInterval(interval)
   }, [activeTab])
 
   const fetchProvider = async () => {
