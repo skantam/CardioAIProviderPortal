@@ -417,12 +417,12 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           )}
         </div>
         {/* Assessments List */}
-        {loading ? (
+        {!showSearchResults && loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">Loading assessments...</p>
           </div>
-        ) : assessments.length === 0 ? (
+        ) : !showSearchResults && assessments.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg shadow-sm">
             <FileText className="w-20 h-20 text-gray-300 mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
@@ -434,7 +434,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                 : 'No assessments have been reviewed yet.'}
             </p>
           </div>
-        ) : (
+        ) : !showSearchResults && (
           <div className="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
             <div className="divide-y divide-gray-200">
               {assessments.map((assessment) => (
