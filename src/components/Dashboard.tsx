@@ -60,7 +60,9 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       // Get current user and their provider info
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
+        setAssessments([])
         setLoading(false)
+        setRefreshing(false)
         return
       }
 
@@ -72,7 +74,9 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         .single()
 
       if (!providerData) {
+        setAssessments([])
         setLoading(false)
+        setRefreshing(false)
         return
       }
 
@@ -94,10 +98,11 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     } catch (error) {
       console.error('Error fetching assessments:', error)
       setAssessments([])
+    } finally {
+      // Always reset loading states
+      setLoading(false)
+      setRefreshing(false)
     }
-    
-    if (!refreshing) setLoading(false)
-    setRefreshing(false)
   }
 
   const handleSearch = async () => {
@@ -178,8 +183,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   }
 
   const handleRefresh = async () => {
+    if (refreshing) return // Prevent multiple simultaneous refreshes
     setRefreshing(true)
-    await fetchAssessments()
+    try {
+      await fetchAssessments()
+    } catch (error) {
+      console.error('Refresh error:', error)
+      setRefreshing(false)
+    }
   }
 
   const getRiskColor = (category: string) => {
