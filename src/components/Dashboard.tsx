@@ -57,41 +57,45 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     if (!refreshing) setLoading(true)
     
     try {
-      // Use the smart-search Edge Function to fetch filtered assessments
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      // Get current user and their provider info
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         setLoading(false)
         return
       }
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-search`
-      const headers = {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
+      // Get provider's country
+      const { data: providerData } = await supabase
+        .from('providers')
+        .select('country')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!providerData) {
+        setLoading(false)
+        return
       }
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          query: '',
-          status: activeTab === 'pending' ? 'pending_review' : 'reviewed',
-          fetch_all: true
-        })
-      })
+      // Direct Supabase query for better performance
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, usercountry')
+        .eq('usercountry', providerData.country)
+        .eq('status', activeTab === 'pending' ? 'pending_review' : 'reviewed')
+        .order('created_at', { ascending: false })
+        .limit(100)
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error Response:', errorText);
-        throw new Error(`Failed to fetch assessments: ${response.status}`)
+      if (error) {
+        console.error('Error fetching assessments:', error)
+        setAssessments([])
+      } else {
+        setAssessments(data || [])
       }
-
-      const data = await response.json()
-      setAssessments(data.results || [])
     } catch (error) {
       console.error('Error fetching assessments:', error)
       setAssessments([])
     }
+    
     if (!refreshing) setLoading(false)
     setRefreshing(false)
   }
