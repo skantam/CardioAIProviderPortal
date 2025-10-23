@@ -102,42 +102,50 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
   return results.filter(result => {
     // Apply risk score filter
     if (filters.riskScore) {
-      const riskScoreStr = result.risk_score?.toString().replace('%', '') || '0';
+      // More robust risk score parsing
+      let riskScoreStr = result.risk_score?.toString() || '0';
+      
+      // Remove percentage sign and any whitespace
+      riskScoreStr = riskScoreStr.replace(/[%\s]/g, '');
+      
       const riskScore = parseFloat(riskScoreStr);
       
       const { operator, value } = filters.riskScore;
       
-      console.log(`Comparing risk score: ${riskScore} ${operator} ${value}`);
+      console.log(`Assessment ${result.id}: Original risk_score="${result.risk_score}", Parsed="${riskScore}", Filter="${operator} ${value}"`);
       
       // Skip if risk score is invalid
       if (isNaN(riskScore)) {
-        console.log(`Invalid risk score: ${result.risk_score}`);
+        console.log(`❌ Assessment ${result.id}: Invalid risk score - skipping`);
         return false;
       }
       
+      let passes = false;
       switch (operator) {
         case '>':
-          if (!(riskScore > value)) return false;
+          passes = riskScore > value;
           break;
         case '>=':
-          if (!(riskScore >= value)) return false;
+          passes = riskScore >= value;
           break;
         case '<':
-          if (!(riskScore < value)) return false;
+          passes = riskScore < value;
           break;
         case '<=':
-          if (!(riskScore <= value)) return false;
+          passes = riskScore <= value;
           break;
         case '=':
         case '==':
-          if (!(Math.abs(riskScore - value) < 0.1)) return false;
+          passes = Math.abs(riskScore - value) < 0.1;
           break;
         default:
-          console.log(`Unknown operator: ${operator}`);
+          console.log(`❌ Unknown operator: ${operator}`);
           return false;
       }
       
-      console.log(`Risk score ${riskScore} ${operator} ${value}: PASSED`);
+      console.log(`${passes ? '✅' : '❌'} Assessment ${result.id}: ${riskScore} ${operator} ${value} = ${passes}`);
+      
+      if (!passes) return false;
     }
 
     // Apply date filter
