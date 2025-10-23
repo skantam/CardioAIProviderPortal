@@ -4,8 +4,9 @@ import { supabase } from './lib/supabase'
 import LandingPage from './components/LandingPage'
 import Dashboard from './components/Dashboard'
 import ReviewAssessment from './components/ReviewAssessment'
+import AuthForm from './components/AuthForm'
 
-type AppState = 'landing' | 'dashboard' | 'review'
+type AppState = 'landing' | 'dashboard' | 'review' | 'reset-password'
 
 function App() {
   const [appState, setAppState] = useState<AppState>('landing')
@@ -14,9 +15,27 @@ function App() {
 
   useEffect(() => {
     checkAuthState()
+    checkForPasswordReset()
   }, [])
 
+  const checkForPasswordReset = () => {
+    // Check if this is a password reset redirect
+    const urlParams = new URLSearchParams(window.location.search)
+    const type = urlParams.get('type')
+    
+    if (type === 'recovery') {
+      setAppState('reset-password')
+      setLoading(false)
+      return
+    }
+  }
   const checkAuthState = async () => {
+    // Skip auth check if we're handling password reset
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('type') === 'recovery') {
+      return
+    }
+
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
       // Check if user has a provider record
@@ -62,6 +81,11 @@ function App() {
     })
   }
 
+  const handlePasswordResetSuccess = () => {
+    // Clear URL parameters and redirect to dashboard
+    window.history.replaceState({}, document.title, window.location.pathname)
+    setAppState('dashboard')
+  }
   const handleAuthSuccess = () => {
     setAppState('dashboard')
   }
@@ -111,6 +135,15 @@ function App() {
           assessmentId={selectedAssessmentId}
           onBack={handleBackToDashboard}
         />
+      )}
+      {appState === 'reset-password' && (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 flex items-center justify-center font-sans">
+          <AuthForm
+            mode="change-password"
+            onClose={() => setAppState('landing')}
+            onSuccess={handlePasswordResetSuccess}
+          />
+        </div>
       )}
     </>
   )

@@ -39,7 +39,7 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
       if (mode === 'forgot-password') {
         // Send password reset email directly - Supabase will handle validation
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${window.location.origin}/?type=recovery`,
         })
 
         if (error) {
