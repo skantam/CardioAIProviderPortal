@@ -353,7 +353,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Apply numerical and date filters (only needed for text searches with filters)
-    if (parsedQuery.textQuery && Object.keys(parsedQuery.filters).length > 0) {
+    if (Object.keys(parsedQuery.filters).length > 0) {
       console.log('Applying filters:', parsedQuery.filters);
       searchResults = applyFilters(searchResults, parsedQuery.filters);
       console.log(`After filtering: ${searchResults.length} results`);
