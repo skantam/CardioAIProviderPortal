@@ -109,24 +109,35 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
       
       console.log(`Comparing risk score: ${riskScore} ${operator} ${value}`);
       
+      // Skip if risk score is invalid
+      if (isNaN(riskScore)) {
+        console.log(`Invalid risk score: ${result.risk_score}`);
+        return false;
+      }
+      
       switch (operator) {
         case '>':
-          if (riskScore <= value) return false;
+          if (!(riskScore > value)) return false;
           break;
         case '>=':
-          if (riskScore < value) return false;
+          if (!(riskScore >= value)) return false;
           break;
         case '<':
-          if (riskScore >= value) return false;
+          if (!(riskScore < value)) return false;
           break;
         case '<=':
-          if (riskScore > value) return false;
+          if (!(riskScore <= value)) return false;
           break;
         case '=':
         case '==':
-          if (Math.abs(riskScore - value) > 0.1) return false;
+          if (!(Math.abs(riskScore - value) < 0.1)) return false;
           break;
+        default:
+          console.log(`Unknown operator: ${operator}`);
+          return false;
       }
+      
+      console.log(`Risk score ${riskScore} ${operator} ${value}: PASSED`);
     }
 
     // Apply date filter
