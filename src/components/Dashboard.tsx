@@ -85,27 +85,24 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       console.log('✅ Provider country cached:', data.country)
       
       // Fetch initial assessments after setting provider country
-      if (data.country && !initialLoadComplete) {
-        await fetchAssessments('pending')
+      if (data.country) {
+        console.log('🔄 Fetching initial assessments with country:', data.country)
+        await fetchAssessmentsWithCountry('pending', data.country)
       }
     }
   }
 
-  const fetchAssessments = async (tab?: 'pending' | 'reviewed', forceRefresh = false) => {
-    if (!providerCountry) {
-      console.log('❌ No provider country available, skipping assessment fetch')
-      return
-    }
+  const fetchAssessmentsWithCountry = async (tab: 'pending' | 'reviewed', country: string, forceRefresh = false) => {
+    console.log(`🔄 fetchAssessmentsWithCountry called for ${tab} tab with country: ${country}`)
 
-    const targetTab = tab || activeTab
     const now = Date.now()
-    const lastFetch = lastFetchTime[targetTab]
+    const lastFetch = lastFetchTime[tab]
     
-    console.log(`🔄 fetchAssessments called for ${targetTab} tab, forceRefresh: ${forceRefresh}`)
+    console.log(`🔄 fetchAssessmentsWithCountry called for ${tab} tab, forceRefresh: ${forceRefresh}`)
     
     // Check if we have cached data and it's still fresh
     if (!forceRefresh && lastFetch && (now - lastFetch) < CACHE_DURATION) {
-      console.log(`Using cached data for ${targetTab} tab`)
+      console.log(`Using cached data for ${tab} tab`)
       return
     }
 
@@ -117,8 +114,8 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       console.log('Using main loading state for initial load')
     } else {
       // Use tab loading for subsequent fetches
-      setTabLoading(prev => ({ ...prev, [targetTab]: true }))
-      console.log(`Setting tab loading for ${targetTab}`)
+      setTabLoading(prev => ({ ...prev, [tab]: true }))
+      console.log(`Setting tab loading for ${tab}`)
     }
     
     try {
@@ -128,12 +125,12 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       )
 
       // Determine status based on active tab
-      const status = targetTab === 'pending' ? 'pending_review' : 'reviewed'
-      console.log(`⏱️ Starting assessments query for status: "${status}", country: "${providerCountry}"`)
+      const status = tab === 'pending' ? 'pending_review' : 'reviewed'
+      console.log(`⏱️ Starting assessments query for status: "${status}", country: "${country}"`)
 
       // Fetch only essential fields to speed up query
       console.log('About to execute query with params:', {
-        usercountry: providerCountry,
+        usercountry: country,
         status: status,
         limit: 30
       })
@@ -142,7 +139,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         supabase
           .from('assessments')
           .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, provider_comments')
-          .eq('usercountry', providerCountry)
+          .eq('usercountry', country)
           .eq('status', status)
           .order('created_at', { ascending: false })
           .limit(30), // Reduced limit for faster loading
@@ -157,10 +154,10 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       if (assessmentError) {
         console.error('Error fetching assessments:', assessmentError)
         console.error('Query failed with error:', assessmentError.message, assessmentError.details)
-        if (targetTab === 'pending') setPendingAssessments([])
+        if (tab === 'pending') setPendingAssessments([])
         else setReviewedAssessments([])
       } else {
-        console.log(`⏱️ Assessments query completed in ${Date.now() - startTime}ms, found ${assessmentData?.length || 0} assessments for status "${status}" and country "${providerCountry}"`)
+        console.log(`⏱️ Assessments query completed in ${Date.now() - startTime}ms, found ${assessmentData?.length || 0} assessments for status "${status}" and country "${country}"`)
         
         // Log first few assessments for debugging
         if (assessmentData && assessmentData.length > 0) {
@@ -172,13 +169,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           })))
         }
         
-        if (targetTab === 'pending') {
+        if (tab === 'pending') {
           setPendingAssessments(assessmentData || [])
         } else {
           setReviewedAssessments(assessmentData || [])
         }
         // Update cache timestamp
-        setLastFetchTime(prev => ({ ...prev, [targetTab]: now }))
+        setLastFetchTime(prev => ({ ...prev, [tab]: now }))
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
@@ -186,13 +183,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       if (error.message === 'Query timeout') {
         console.error(`❌ Database query timed out after ${Date.now() - startTime}ms - this may indicate slow network or database issues`)
       }
-      if (targetTab === 'pending') setPendingAssessments([])
+      if (tab === 'pending') setPendingAssessments([])
       else setReviewedAssessments([])
     } finally {
-      console.log(`⏱️ Total fetchAssessments time: ${Date.now() - startTime}ms`)
+      console.log(`⏱️ Total fetchAssessmentsWithCountry time: ${Date.now() - startTime}ms`)
       if (initialLoadComplete) {
-        setTabLoading(prev => ({ ...prev, [targetTab]: false }))
-        console.log(`Cleared tab loading for ${targetTab}`)
+        setTabLoading(prev => ({ ...prev, [tab]: false }))
+        console.log(`Cleared tab loading for ${tab}`)
       }
       if (forceRefresh) {
         setRefreshing(false)
@@ -201,6 +198,15 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     }
   }
 
+  const fetchAssessments = async (tab?: 'pending' | 'reviewed', forceRefresh = false) => {
+    if (!providerCountry) {
+      console.log('❌ No provider country available, skipping assessment fetch')
+      return
+    }
+    
+    const targetTab = tab || activeTab
+    await fetchAssessmentsWithCountry(targetTab, providerCountry, forceRefresh)
+  }
   const handleSearch = async () => {
     if (!searchQuery.trim()) return
 
