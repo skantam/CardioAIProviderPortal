@@ -29,6 +29,10 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showChangePassword, setShowChangePassword] = useState(false)
+  const [tabLoading, setTabLoading] = useState<{pending: boolean, reviewed: boolean}>({
+    pending: false,
+    reviewed: false
+  })
 
   // Cache for assessments to avoid refetching
   const [lastFetchTime, setLastFetchTime] = useState<{pending?: number, reviewed?: number}>({})
@@ -71,9 +75,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       return
     }
 
-    // Only show loading for initial load or refresh
-    if (!lastFetch || forceRefresh) {
+    // Set appropriate loading state
+    if (!lastFetch) {
+      // Initial load - show main loading
       setLoading(true)
+    } else {
+      // Subsequent loads - show tab-specific loading
+      setTabLoading(prev => ({ ...prev, [targetTab]: true }))
     }
     
     try {
@@ -135,7 +143,10 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       else setReviewedAssessments([])
     } finally {
       setLoading(false)
-      setRefreshing(false)
+      setTabLoading(prev => ({ ...prev, [targetTab]: false }))
+      if (forceRefresh) {
+        setRefreshing(false)
+      }
     }
   }
 
@@ -198,14 +209,15 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   }
 
   const handleRefresh = async () => {
-    if (refreshing) return // Prevent multiple simultaneous refreshes
+    if (refreshing || tabLoading[activeTab]) return // Prevent multiple simultaneous refreshes
     setRefreshing(true)
-    // Clear cache to force refresh
-    setLastFetchTime({})
+    // Clear cache for current tab to force refresh
+    setLastFetchTime(prev => ({ ...prev, [activeTab]: undefined }))
     try {
       await fetchAssessments(activeTab, true)
     } catch (error) {
       console.error('Refresh error:', error)
+    } finally {
       setRefreshing(false)
     }
   }
@@ -453,11 +465,11 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           )}
         </div>
         {/* Assessments List */}
-        {!showSearchResults && loading ? (
+        {!showSearchResults && (loading || tabLoading[activeTab]) ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">
-              Loading assessments...
+              {refreshing ? 'Refreshing assessments...' : 'Loading assessments...'}
             </p>
           </div>
         ) : !showSearchResults && currentAssessments.length === 0 ? (
