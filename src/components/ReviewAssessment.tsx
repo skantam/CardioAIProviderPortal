@@ -33,17 +33,31 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
       console.log('🔄 Fetching assessment details for:', assessmentId)
       const startTime = Date.now()
       
-      // Fetch minimal fields first for faster initial load
+      // Fetch assessment data
       const { data, error } = await supabase
         .from('assessments')
-        .select('id, user_id, risk_score, risk_category, inputs, recommendations, status, overall_recommendation, provider_comments, created_at, results, guidelines, disclaimer')
+        .select(`
+          id, 
+          user_id, 
+          risk_score, 
+          risk_category, 
+          inputs, 
+          recommendations, 
+          status, 
+          overall_recommendation, 
+          provider_comments, 
+          created_at, 
+          results, 
+          guidelines, 
+          disclaimer
+        `)
         .eq('id', assessmentId)
         .single()
 
       console.log(`⏱️ Assessment fetch completed in ${Date.now() - startTime}ms`)
       
       // Check if this request is still current
-      if (currentRequestId !== requestId) {
+      if (currentRequestId < requestId) {
         console.log('🚫 Request cancelled - newer request in progress')
         return
       }
@@ -58,12 +72,12 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
     } catch (err) {
       console.error('Unexpected error:', err)
       // Check if this request is still current before setting error
-      if (currentRequestId === requestId) {
+      if (currentRequestId >= requestId) {
         setError('Failed to load assessment. Please try again.')
       }
     } finally {
       // Only clear loading if this request is still current
-      if (currentRequestId === requestId) {
+      if (currentRequestId >= requestId) {
         setLoading(false)
       }
     }
