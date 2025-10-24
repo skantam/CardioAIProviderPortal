@@ -295,20 +295,38 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       return
     }
     
-    console.log(`Starting refresh for ${activeTab} tab`)
+    console.log(`Quick refresh for ${activeTab} tab`)
     setRefreshing(true)
     
     try {
-      // Clear cache for current tab to force refresh
+      // Just clear cache and do a minimal fetch - realtime will handle updates
       setLastFetchTime(prev => ({ ...prev, [activeTab]: undefined }))
-      startTransition(() => {
-        fetchAssessments(activeTab, true)
-      })
-      console.log(`✅ Refresh completed for ${activeTab} tab`)
+      
+      // Quick fetch without heavy processing
+      if (providerCountry) {
+        const status = activeTab === 'pending' ? 'pending_review' : 'reviewed'
+        const { data } = await supabase
+          .from('assessments')
+          .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, provider_comments')
+          .eq('usercountry', providerCountry)
+          .eq('status', status)
+          .order('created_at', { ascending: false })
+          .limit(30)
+        
+        // Update state directly without transitions
+        if (activeTab === 'pending') {
+          setPendingAssessments(data || [])
+        } else {
+          setReviewedAssessments(data || [])
+        }
+        
+        setLastFetchTime(prev => ({ ...prev, [activeTab]: Date.now() }))
+      }
+      
+      console.log(`✅ Quick refresh completed for ${activeTab} tab`)
     } catch (error) {
       console.error('Refresh error:', error)
     } finally {
-      console.log(`🔄 Clearing refresh state for ${activeTab} tab`)
       setRefreshing(false)
     }
   }
