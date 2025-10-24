@@ -129,9 +129,15 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
 
       // Determine status based on active tab
       const status = targetTab === 'pending' ? 'pending_review' : 'reviewed'
-      console.log(`⏱️ Starting assessments query for status: ${status}, country: ${providerCountry}`)
+      console.log(`⏱️ Starting assessments query for status: "${status}", country: "${providerCountry}"`)
 
       // Fetch only essential fields to speed up query
+      console.log('About to execute query with params:', {
+        usercountry: providerCountry,
+        status: status,
+        limit: 30
+      })
+      
       const { data: assessmentData, error: assessmentError } = await Promise.race([
         supabase
           .from('assessments')
@@ -143,12 +149,29 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         timeoutPromise
       ]) as any
 
+      console.log('Raw query result:', { 
+        data: assessmentData, 
+        error: assessmentError,
+        dataLength: assessmentData?.length || 0
+      })
       if (assessmentError) {
         console.error('Error fetching assessments:', assessmentError)
+        console.error('Query failed with error:', assessmentError.message, assessmentError.details)
         if (targetTab === 'pending') setPendingAssessments([])
         else setReviewedAssessments([])
       } else {
-        console.log(`⏱️ Assessments query completed in ${Date.now() - startTime}ms, found ${assessmentData?.length || 0} assessments`)
+        console.log(`⏱️ Assessments query completed in ${Date.now() - startTime}ms, found ${assessmentData?.length || 0} assessments for status "${status}" and country "${providerCountry}"`)
+        
+        // Log first few assessments for debugging
+        if (assessmentData && assessmentData.length > 0) {
+          console.log('Sample assessments found:', assessmentData.slice(0, 3).map(a => ({
+            id: a.id,
+            status: a.status,
+            usercountry: a.usercountry,
+            created_at: a.created_at
+          })))
+        }
+        
         if (targetTab === 'pending') {
           setPendingAssessments(assessmentData || [])
         } else {
