@@ -173,14 +173,11 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       if (tab === 'pending') setPendingAssessments([])
       else setReviewedAssessments([])
     } finally {
-      console.log(`⏱️ Total fetchAssessmentsWithCountry time: ${Date.now() - startTime}ms`)
-      if (initialLoadComplete) {
+      // Clear appropriate loading state
+      if (!initialLoadComplete) {
+        // Don't clear main loading here, it's handled in initializeDashboard
+      } else {
         setTabLoading(prev => ({ ...prev, [tab]: false }))
-        console.log(`Cleared tab loading for ${tab}`)
-      }
-      if (forceRefresh) {
-        setRefreshing(false)
-        console.log('Cleared refreshing state')
       }
     }
   }
