@@ -119,11 +119,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     }
     
     try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout')), 30000)
-      )
-
       // Determine status based on active tab
       const status = tab === 'pending' ? 'pending_review' : 'reviewed'
       console.log(`⏱️ Starting assessments query for status: "${status}", country: "${country}"`)
@@ -135,18 +130,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         limit: 30
       })
       
-            const { data, error } = await supabase
+      const { data: assessmentData, error: assessmentError } = await supabase
         .from('assessments')
         .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, provider_comments')
         .eq('usercountry', country)
         .eq('status', status)
         .order('created_at', { ascending: false })
         .limit(30);
-    
-
-      console.log('Raw query result:', { 
-        data: assessmentData, 
-        error: assessmentError,
         dataLength: assessmentData?.length || 0
       })
       if (assessmentError) {
@@ -177,10 +167,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
-      // Show user-friendly error message
-      if (error.message === 'Query timeout') {
-        console.error(`❌ Database query timed out after 30 seconds - this may indicate slow network or database issues`)
-      }
       if (tab === 'pending') setPendingAssessments([])
       else setReviewedAssessments([])
     } finally {
