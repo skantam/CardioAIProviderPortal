@@ -62,6 +62,44 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         setLoading(false)
         return
       }
+
+      // Get provider's country
+      const { data: providerData, error: providerError } = await supabase
+        .from('providers')
+        .select('country')
+        .eq('user_id', user.id)
+        .single()
+
+      if (providerError || !providerData) {
+        console.error('Error fetching provider:', providerError)
+        setAssessments([])
+        setLoading(false)
+        return
+      }
+
+      const providerCountry = providerData.country
+      console.log('Provider country:', providerCountry)
+
+      // Determine status based on active tab
+      const status = activeTab === 'pending' ? 'pending_review' : 'reviewed'
+      console.log('Fetching assessments with status:', status)
+
+      // Fetch assessments filtered by country and status
+      const { data: assessmentData, error: assessmentError } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('usercountry', providerCountry)
+        .eq('status', status)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (assessmentError) {
+        console.error('Error fetching assessments:', assessmentError)
+        setAssessments([])
+      } else {
+        console.log(`Found ${assessmentData?.length || 0} assessments`)
+        setAssessments(assessmentData || [])
+      }
     } catch (error) {
       console.error('Error fetching assessments:', error)
       setAssessments([])
