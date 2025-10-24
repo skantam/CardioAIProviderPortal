@@ -102,13 +102,24 @@ function applyFilters(results: any[], filters: ParsedQuery['filters']): any[] {
   return results.filter(result => {
     // Apply risk score filter
     if (filters.riskScore) {
-      // More robust risk score parsing
-      let riskScoreStr = result.risk_score?.toString() || '0';
+      // Parse risk score - handle both string and number formats
+      let riskScore = 0;
       
-      // Remove percentage sign and any whitespace
-      riskScoreStr = riskScoreStr.replace(/[%\s]/g, '');
-      
-      const riskScore = parseFloat(riskScoreStr);
+      if (result.risk_score !== null && result.risk_score !== undefined) {
+        const riskScoreStr = result.risk_score.toString();
+        
+        // Remove percentage sign, whitespace, and extract number
+        const cleanedScore = riskScoreStr.replace(/[%\s]/g, '');
+        riskScore = parseFloat(cleanedScore);
+        
+        // If the original had a %, treat as percentage, otherwise as decimal
+        if (riskScoreStr.includes('%')) {
+          // Already a percentage, use as-is
+        } else if (riskScore <= 1 && riskScore > 0) {
+          // Likely a decimal (0.15), convert to percentage
+          riskScore = riskScore * 100;
+        }
+      }
       
       const { operator, value } = filters.riskScore;
       
