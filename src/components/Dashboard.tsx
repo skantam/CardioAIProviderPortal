@@ -137,8 +137,11 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         .eq('status', status)
         .order('created_at', { ascending: false })
         .limit(30);
+      
+      console.log('Query completed:', {
         dataLength: assessmentData?.length || 0
       })
+      
       if (assessmentError) {
         console.error('Error fetching assessments:', assessmentError)
         console.error('Query failed with error:', assessmentError.message, assessmentError.details)
@@ -169,6 +172,17 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       console.error('Error fetching assessments:', error)
       if (tab === 'pending') setPendingAssessments([])
       else setReviewedAssessments([])
+    } finally {
+      console.log(`⏱️ Total fetchAssessmentsWithCountry time: ${Date.now() - startTime}ms`)
+      if (initialLoadComplete) {
+        setTabLoading(prev => ({ ...prev, [tab]: false }))
+        console.log(`Cleared tab loading for ${tab}`)
+      }
+      if (forceRefresh) {
+        setRefreshing(false)
+        console.log('Cleared refreshing state')
+      }
+    }
   }
 
   const fetchAssessments = async (tab?: 'pending' | 'reviewed', forceRefresh = false) => {
