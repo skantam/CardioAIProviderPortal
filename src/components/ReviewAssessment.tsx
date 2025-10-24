@@ -36,21 +36,7 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
       // Fetch assessment data
       const { data, error } = await supabase
         .from('assessments')
-        .select(`
-          id, 
-          user_id, 
-          risk_score, 
-          risk_category, 
-          inputs, 
-          recommendations, 
-          status, 
-          overall_recommendation, 
-          provider_comments, 
-          created_at, 
-          results, 
-          guidelines, 
-          disclaimer
-        `)
+        .select('id, user_id, risk_score, risk_category, inputs, recommendations, status, overall_recommendation, provider_comments, created_at, results, guidelines, disclaimer')
         .eq('id', assessmentId)
         .single()
 
