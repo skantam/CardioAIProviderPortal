@@ -98,14 +98,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     const now = Date.now()
     const lastFetch = lastFetchTime[tab]
     
-    console.log(`🔄 fetchAssessmentsWithCountry called for ${tab} tab, forceRefresh: ${forceRefresh}`)
-    
     // Check if we have cached data and it's still fresh
     if (!forceRefresh && lastFetch && (now - lastFetch) < CACHE_DURATION) {
       console.log(`Using cached data for ${tab} tab`)
       return
     }
 
+    console.log(`🔄 Fetching fresh data for ${tab} tab`)
     const startTime = Date.now()
     
     // Set appropriate loading state
@@ -150,6 +149,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       } else {
         console.log(`⏱️ Assessments query completed in ${Date.now() - startTime}ms, found ${assessmentData?.length || 0} assessments for status "${status}" and country "${country}"`)
         
+        console.log(`📊 Setting ${tab} assessments data:`, assessmentData?.length || 0, 'items')
         // Log first few assessments for debugging
         if (assessmentData && assessmentData.length > 0) {
           console.log('Sample assessments found:', assessmentData.slice(0, 3).map(a => ({
@@ -162,8 +162,10 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         
         if (tab === 'pending') {
           setPendingAssessments(assessmentData || [])
+          console.log(`✅ Updated pending assessments: ${assessmentData?.length || 0} items`)
         } else {
           setReviewedAssessments(assessmentData || [])
+          console.log(`✅ Updated reviewed assessments: ${assessmentData?.length || 0} items`)
         }
         // Update cache timestamp
         setLastFetchTime(prev => ({ ...prev, [tab]: now }))
@@ -172,6 +174,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       console.error('Error fetching assessments:', error)
       if (tab === 'pending') setPendingAssessments([])
       else setReviewedAssessments([])
+      setRefreshing(false) // Clear refresh state on error
     } finally {
       // Clear appropriate loading state
       if (!initialLoadComplete) {
@@ -179,6 +182,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       } else {
         setTabLoading(prev => ({ ...prev, [tab]: false }))
       }
+      console.log(`🏁 Completed fetchAssessmentsWithCountry for ${tab} tab`)
     }
   }
 
@@ -189,6 +193,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     }
     
     const targetTab = tab || activeTab
+    console.log(`🔄 fetchAssessments called for ${targetTab}, forceRefresh: ${forceRefresh}`)
     await fetchAssessmentsWithCountry(targetTab, providerCountry, forceRefresh)
   }
   const handleSearch = async () => {
@@ -250,20 +255,23 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   }
 
   const handleRefresh = async () => {
-    if (refreshing || tabLoading[activeTab]) {
-      console.log('Refresh blocked - already in progress')
+    if (refreshing) {
+      console.log('Refresh already in progress')
       return
     }
     
     console.log(`Starting refresh for ${activeTab} tab`)
     setRefreshing(true)
-    // Clear cache for current tab to force refresh
-    setLastFetchTime(prev => ({ ...prev, [activeTab]: undefined }))
+    
     try {
+      // Clear cache for current tab to force refresh
+      setLastFetchTime(prev => ({ ...prev, [activeTab]: undefined }))
       await fetchAssessments(activeTab, true)
+      console.log(`✅ Refresh completed for ${activeTab} tab`)
     } catch (error) {
       console.error('Refresh error:', error)
     } finally {
+      console.log(`🔄 Clearing refresh state for ${activeTab} tab`)
       setRefreshing(false)
     }
   }
