@@ -34,6 +34,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     pending: false,
     reviewed: false
   })
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
 
   // Cache for assessments to avoid refetching
   const [lastFetchTime, setLastFetchTime] = useState<{pending?: number, reviewed?: number}>({})
@@ -50,13 +51,11 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     setLoading(true)
     try {
       await fetchProviderAndCountry()
-      if (providerCountry) {
-        await fetchAssessments('pending')
-      }
     } catch (error) {
       console.error('Dashboard initialization error:', error)
     } finally {
       setLoading(false)
+      setInitialLoadComplete(true)
     }
   }
 
@@ -84,6 +83,11 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       setProvider(data)
       setProviderCountry(data.country)
       console.log('✅ Provider country cached:', data.country)
+      
+      // Fetch initial assessments after setting provider country
+      if (data.country && !initialLoadComplete) {
+        await fetchAssessments('pending')
+      }
     }
   }
 
@@ -107,10 +111,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
 
     const startTime = Date.now()
     
-    // Set loading state - use main loading only for very first load
-    const isInitialLoad = !lastFetchTime.pending && !lastFetchTime.reviewed
-    if (!isInitialLoad) {
+    // Set appropriate loading state
+    if (!initialLoadComplete) {
+      // Still in initial load phase
+      console.log('Using main loading state for initial load')
+    } else {
+      // Use tab loading for subsequent fetches
       setTabLoading(prev => ({ ...prev, [targetTab]: true }))
+      console.log(`Setting tab loading for ${targetTab}`)
     }
     
     try {
@@ -159,11 +167,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       else setReviewedAssessments([])
     } finally {
       console.log(`⏱️ Total fetchAssessments time: ${Date.now() - startTime}ms`)
-      if (!isInitialLoad) {
+      if (initialLoadComplete) {
         setTabLoading(prev => ({ ...prev, [targetTab]: false }))
+        console.log(`Cleared tab loading for ${targetTab}`)
       }
       if (forceRefresh) {
         setRefreshing(false)
+        console.log('Cleared refreshing state')
       }
     }
   }
@@ -227,7 +237,12 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   }
 
   const handleRefresh = async () => {
-    if (refreshing || tabLoading[activeTab]) return // Prevent multiple simultaneous refreshes
+    if (refreshing || tabLoading[activeTab]) {
+      console.log('Refresh blocked - already in progress')
+      return
+    }
+    
+    console.log(`Starting refresh for ${activeTab} tab`)
     setRefreshing(true)
     // Clear cache for current tab to force refresh
     setLastFetchTime(prev => ({ ...prev, [activeTab]: undefined }))
@@ -243,6 +258,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const handleTabSwitch = async (newTab: 'pending' | 'reviewed') => {
     if (newTab === activeTab) return
     
+    console.log(`Switching from ${activeTab} to ${newTab} tab`)
     setActiveTab(newTab)
     clearSearch()
     
@@ -483,11 +499,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           )}
         </div>
         {/* Assessments List */}
-        {!showSearchResults && (loading || tabLoading[activeTab]) ? (
+        {!showSearchResults && (!initialLoadComplete || tabLoading[activeTab]) ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">
-              {refreshing ? 'Refreshing assessments...' : 'Loading assessments...'}
+              {!initialLoadComplete ? 'Loading dashboard...' : 
+               refreshing ? 'Refreshing assessments...' : 
+               'Loading assessments...'}
             </p>
           </div>
         ) : !showSearchResults && currentAssessments.length === 0 ? (
