@@ -134,33 +134,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     setShowSearchResults(true)
 
     try {
-      // First, generate embeddings for any assessments that don't have them
-      console.log('Generating embeddings for assessments...')
+      // Perform the search
+      console.log('Performing search...')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         setSearching(false)
         return
       }
-
-      const embeddingApiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-embeddings`
-      const embeddingHeaders = {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      }
-
-      const embeddingResponse = await fetch(embeddingApiUrl, {
-        method: 'POST',
-        headers: embeddingHeaders,
-        body: JSON.stringify({})
-      })
-
-      if (embeddingResponse.ok) {
-        const embeddingResult = await embeddingResponse.json()
-        console.log('Embedding generation result:', embeddingResult)
-      }
-
-      // Now perform the search
-      console.log('Performing search...')
+      
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-search`
       const headers = {
         'Authorization': `Bearer ${session.access_token}`,
