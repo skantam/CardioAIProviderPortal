@@ -26,6 +26,8 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showChangePassword, setShowChangePassword] = useState(false)
 
   useEffect(() => {
     fetchProvider()
