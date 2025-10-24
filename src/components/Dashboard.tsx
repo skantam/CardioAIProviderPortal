@@ -23,11 +23,9 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const [loading, setLoading] = useState(true)
   const [provider, setProvider] = useState<any>(null)
   const [refreshing, setRefreshing] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
-  const [showChangePassword, setShowChangePassword] = useState(false)
 
   useEffect(() => {
     fetchProvider()
@@ -39,14 +37,12 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     if (user) {
       const { data } = await supabase
         .from('providers')
-        .select('*')
         .eq('user_id', user.id)
         .maybeSingle()
       
       if (!data) {
         // If no provider record found, sign out the user
         await supabase.auth.signOut()
-        return
       }
       
       setProvider(data)
@@ -57,50 +53,12 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     if (!refreshing) setLoading(true)
     
     try {
-      // Get current user and their provider info
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         console.log('No user found')
         setAssessments([])
         setLoading(false)
-        setRefreshing(false)
         return
-      }
-
-      // Get provider's country
-      const { data: providerData } = await supabase
-        .from('providers')
-        .select('country')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!providerData) {
-        console.log('No provider data found')
-        setAssessments([])
-        setLoading(false)
-        setRefreshing(false)
-        return
-      }
-
-      console.log('Provider country:', providerData.country)
-
-      // Direct Supabase query for better performance
-      const { data, error } = await supabase
-        .from('assessments')
-        .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, usercountry')
-        .eq('usercountry', providerData.country)
-        .eq('status', activeTab === 'pending' ? 'pending_review' : 'reviewed')
-        .order('created_at', { ascending: false })
-        .limit(100)
-
-      console.log('Query result:', { data, error, providerCountry: providerData.country, status: activeTab === 'pending' ? 'pending_review' : 'reviewed' })
-
-      if (error) {
-        console.error('Error fetching assessments:', error)
-        setAssessments([])
-      } else {
-        console.log(`Found ${data?.length || 0} assessments`)
-        setAssessments(data || [])
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
@@ -451,17 +409,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                 ? 'No assessments are currently pending review.'
                 : 'No assessments have been reviewed yet.'}
             </p>
-            {debugInfo && (
-              <div className="mt-6 p-4 bg-gray-100 rounded-lg text-left max-w-md mx-auto">
-                <h4 className="font-semibold text-gray-900 mb-2">Debug Info:</h4>
-                <div className="text-sm text-gray-700 space-y-1">
-                  <p><strong>Your Country:</strong> {debugInfo.providerCountry}</p>
-                  <p><strong>Available Countries:</strong> {debugInfo.availableCountries.join(', ') || 'None'}</p>
-                  <p><strong>Available Statuses:</strong> {debugInfo.availableStatuses.join(', ') || 'None'}</p>
-                  <p><strong>Total Assessments:</strong> {debugInfo.totalAssessments}</p>
-                </div>
-              </div>
-            )}
           </div>
         ) : !showSearchResults && (
           <div className="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">

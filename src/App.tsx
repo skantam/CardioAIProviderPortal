@@ -36,29 +36,8 @@ function App() {
       return
     }
 
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      // Check if user has a provider record
-      const { data: provider } = await supabase
-        .from('providers')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle()
-      
-      if (provider) {
-        setAppState('dashboard')
-      } else {
-        // No provider record, sign out
-        await supabase.auth.signOut()
-        setAppState('landing')
-      }
-    } else {
-      setAppState('landing')
-    }
-    setLoading(false)
-
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         // Check if user has a provider record
         const { data: provider } = await supabase
@@ -76,7 +55,39 @@ function App() {
         }
       } else {
         setAppState('landing')
-        setSelectedAssessmentId(null)
+      }
+    } catch (error) {
+      console.error('Auth check error:', error)
+      setAppState('landing')
+    } finally {
+      setLoading(false)
+    }
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (session) {
+          // Check if user has a provider record
+          const { data: provider } = await supabase
+            .from('providers')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
+          
+          if (provider) {
+            setAppState('dashboard')
+          } else {
+            // No provider record, sign out
+            await supabase.auth.signOut()
+            setAppState('landing')
+          }
+        } else {
+          setAppState('landing')
+          setSelectedAssessmentId(null)
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error)
+        setAppState('landing')
       }
     })
   }
