@@ -135,16 +135,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         limit: 30
       })
       
-      const { data: assessmentData, error: assessmentError } = await Promise.race([
-        supabase
-          .from('assessments')
-          .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, provider_comments')
-          .eq('usercountry', country)
-          .eq('status', status)
-          .order('created_at', { ascending: false })
-          .limit(30), // Reduced limit for faster loading
-        timeoutPromise
-      ]) as any
+            const { data, error } = await supabase
+        .from('assessments')
+        .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, provider_comments')
+        .eq('usercountry', country)
+        .eq('status', status)
+        .order('created_at', { ascending: false })
+        .limit(30);
+    
 
       console.log('Raw query result:', { 
         data: assessmentData, 
