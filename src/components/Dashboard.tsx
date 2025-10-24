@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useTransition, useRef } from 'react'
 import { supabase, Assessment } from '../lib/supabase'
 import { LogOut, FileText, Clock, CheckCircle, RefreshCw, Heart, Search, Loader2, Settings } from 'lucide-react'
 import AuthForm from './AuthForm'
@@ -35,6 +35,9 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     reviewed: false
   })
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
+  const [isPendingUI, startTransition] = useTransition()
+  const requestTokenRef = useRef(0)
+  const [latestCreatedAt, setLatestCreatedAt] = useState<{pending?: string, reviewed?: string}>({})
 
   // Cache for assessments to avoid refetching
   const [lastFetchTime, setLastFetchTime] = useState<{pending?: number, reviewed?: number}>({})
@@ -46,6 +49,32 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
 
   // Get current assessments based on active tab
   const currentAssessments = activeTab === 'pending' ? pendingAssessments : reviewedAssessments
+
+  // Helper function to reconcile realtime changes
+  function reconcile(list: Assessment[], payload: any, tabStatus: 'pending_review' | 'reviewed') {
+    const row = payload.new ?? payload.old;
+    const isForTab = row?.status === tabStatus;
+    if (!row || !isForTab) {
+      // If a row moved *out* of this tab, drop it on UPDATE/DELETE
+      if (payload.eventType !== 'INSERT') {
+        return list.filter(a => a.id !== row?.id);
+      }
+      return list;
+    }
+
+    switch (payload.eventType) {
+      case 'INSERT':
+        return [row, ...list].slice(0, 30);
+      case 'UPDATE':
+        return [row, ...list.filter(a => a.id !== row.id)].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ).slice(0, 30);
+      case 'DELETE':
+        return list.filter(a => a.id !== row.id);
+      default:
+        return list;
+    }
+  }
 
   const initializeDashboard = async () => {
     setLoading(true)
@@ -84,16 +113,22 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       setProviderCountry(data.country)
       console.log('✅ Provider country cached:', data.country)
       
-      // Fetch initial assessments after setting provider country
+      // Fetch both tabs in parallel for instant switching
       if (data.country) {
-        console.log('🔄 Fetching initial assessments with country:', data.country)
-        await fetchAssessmentsWithCountry('pending', data.country)
+        console.log('🔄 Fetching both tabs with country:', data.country)
+        await Promise.all([
+          fetchAssessmentsWithCountry('pending', data.country, true),
+          fetchAssessmentsWithCountry('reviewed', data.country, true)
+        ]);
       }
     }
   }
 
   const fetchAssessmentsWithCountry = async (tab: 'pending' | 'reviewed', country: string, forceRefresh = false) => {
     console.log(`🔄 fetchAssessmentsWithCountry called for ${tab} tab with country: ${country}`)
+
+    // Generate request token to cancel stale requests
+    const currentToken = ++requestTokenRef.current;
 
     const now = Date.now()
     const lastFetch = lastFetchTime[tab]
@@ -266,7 +301,9 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     try {
       // Clear cache for current tab to force refresh
       setLastFetchTime(prev => ({ ...prev, [activeTab]: undefined }))
-      await fetchAssessments(activeTab, true)
+      startTransition(() => {
+        fetchAssessments(activeTab, true)
+      })
       console.log(`✅ Refresh completed for ${activeTab} tab`)
     } catch (error) {
       console.error('Refresh error:', error)
@@ -315,6 +352,42 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const formatAssessmentId = (id: string) => {
     return `CVD-${id.substring(0, 8).toUpperCase()}`
   }
+
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString()
+
+  // Set up realtime subscription after provider country is available
+  useEffect(() => {
+    if (!providerCountry) return;
+
+    const channel = supabase
+      .channel('assessments-feed')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // 'INSERT' | 'UPDATE' | 'DELETE'
+          schema: 'public',
+          table: 'assessments',
+          filter: `usercountry=eq.${providerCountry}`, // server-side filter
+        },
+        (payload) => {
+          console.log('Realtime update received:', payload);
+          // Only patch the currently visible tab, avoid full refetch
+          startTransition(() => {
+            setPendingAssessments((prev) => {
+              return reconcile(prev, payload, 'pending_review');
+            });
+            setReviewedAssessments((prev) => {
+              return reconcile(prev, payload, 'reviewed');
+            });
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [providerCountry, activeTab]);
 
   return (
     <div className="min-h-screen bg-white font-sans">
