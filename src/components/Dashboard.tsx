@@ -60,6 +60,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       // Get current user and their provider info
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
+        console.log('No user found')
         setAssessments([])
         setLoading(false)
         setRefreshing(false)
@@ -74,11 +75,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         .single()
 
       if (!providerData) {
+        console.log('No provider data found')
         setAssessments([])
         setLoading(false)
         setRefreshing(false)
         return
       }
+
+      console.log('Provider country:', providerData.country)
 
       // Direct Supabase query for better performance
       const { data, error } = await supabase
@@ -89,10 +93,13 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         .order('created_at', { ascending: false })
         .limit(100)
 
+      console.log('Query result:', { data, error, providerCountry: providerData.country, status: activeTab === 'pending' ? 'pending_review' : 'reviewed' })
+
       if (error) {
         console.error('Error fetching assessments:', error)
         setAssessments([])
       } else {
+        console.log(`Found ${data?.length || 0} assessments`)
         setAssessments(data || [])
       }
     } catch (error) {
