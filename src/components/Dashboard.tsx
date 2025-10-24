@@ -46,6 +46,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     if (user) {
       const { data } = await supabase
         .from('providers')
+        .select('*')
         .eq('user_id', user.id)
         .maybeSingle()
       
