@@ -75,17 +75,25 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       return
     }
 
-    // Set appropriate loading state
-    if (!lastFetch) {
-      // Initial load - show main loading
+    // Set loading state - use main loading only for very first load
+    const isInitialLoad = !lastFetchTime.pending && !lastFetchTime.reviewed
+    if (isInitialLoad) {
       setLoading(true)
     } else {
-      // Subsequent loads - show tab-specific loading
       setTabLoading(prev => ({ ...prev, [targetTab]: true }))
     }
     
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout')), 10000)
+      )
+
+      const { data: { user } } = await Promise.race([
+        supabase.auth.getUser(),
+        timeoutPromise
+      ]) as any
+      
       if (!user) {
         console.log('No user found')
         if (targetTab === 'pending') setPendingAssessments([])
@@ -94,11 +102,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       }
 
       // Get provider's country
-      const { data: providerData, error: providerError } = await supabase
-        .from('providers')
-        .select('country')
-        .eq('user_id', user.id)
-        .single()
+      const { data: providerData, error: providerError } = await Promise.race([
+        supabase
+          .from('providers')
+          .select('country')
+          .eq('user_id', user.id)
+          .single(),
+        timeoutPromise
+      ]) as any
 
       if (providerError || !providerData) {
         console.error('Error fetching provider:', providerError)
@@ -114,14 +125,17 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       const status = targetTab === 'pending' ? 'pending_review' : 'reviewed'
       console.log('Fetching assessments with status:', status)
 
-      // Fetch assessments filtered by country and status
-      const { data: assessmentData, error: assessmentError } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('usercountry', providerCountry)
-        .eq('status', status)
-        .order('created_at', { ascending: false })
-        .limit(50)
+      // Fetch only essential fields to speed up query
+      const { data: assessmentData, error: assessmentError } = await Promise.race([
+        supabase
+          .from('assessments')
+          .select('id, user_id, risk_score, risk_category, created_at, status, overall_recommendation, provider_comments')
+          .eq('usercountry', providerCountry)
+          .eq('status', status)
+          .order('created_at', { ascending: false })
+          .limit(30), // Reduced limit for faster loading
+        timeoutPromise
+      ]) as any
 
       if (assessmentError) {
         console.error('Error fetching assessments:', assessmentError)
@@ -139,10 +153,16 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
+      // Show user-friendly error message
+      if (error.message === 'Query timeout') {
+        console.error('Database query timed out - this may indicate slow network or database issues')
+      }
       if (targetTab === 'pending') setPendingAssessments([])
       else setReviewedAssessments([])
     } finally {
-      setLoading(false)
+      if (isInitialLoad) {
+        setLoading(false)
+      }
       setTabLoading(prev => ({ ...prev, [targetTab]: false }))
       if (forceRefresh) {
         setRefreshing(false)
