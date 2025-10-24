@@ -124,7 +124,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     try {
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout')), 10000)
+        setTimeout(() => reject(new Error('Query timeout')), 20000)
       )
 
       // Determine status based on active tab
