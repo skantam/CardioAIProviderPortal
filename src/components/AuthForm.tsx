@@ -36,6 +36,11 @@ export default function AuthForm({ mode, onClose, onSuccess, onModeChange }: Aut
     setMessage('')
 
     try {
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Application configuration error. Please contact support.')
+      }
+
       if (mode === 'forgot-password') {
         // Send password reset email directly - Supabase will handle validation
         const { error } = await supabase.auth.resetPasswordForEmail(email, {

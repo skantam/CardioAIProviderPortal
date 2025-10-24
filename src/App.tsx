@@ -5,6 +5,7 @@ import LandingPage from './components/LandingPage'
 import Dashboard from './components/Dashboard'
 import ReviewAssessment from './components/ReviewAssessment'
 import AuthForm from './components/AuthForm'
+import EnvCheck from './components/EnvCheck'
 
 type AppState = 'landing' | 'dashboard' | 'review' | 'reset-password'
 
@@ -12,6 +13,11 @@ function App() {
   const [appState, setAppState] = useState<AppState>('landing')
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Check environment configuration first
+  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    return <EnvCheck />
+  }
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -48,28 +54,35 @@ function App() {
     }
 
     try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Auth timeout')), 10000)
-      )
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.error('Supabase environment variables not configured')
+        setAppState('landing')
+        setLoading(false)
+        return
+      }
+
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      const authPromise = supabase.auth.getSession()
-      const { data: { session } } = await Promise.race([authPromise, timeoutPromise])
+      if (sessionError) {
+        console.error('Session error:', sessionError)
+        setAppState('landing')
+        setLoading(false)
+        return
+      }
       
       if (session) {
-        // Check if user has a provider record
-        const providerPromise = supabase
+        const { data: provider, error: providerError } = await supabase
           .from('providers')
           .select('id')
           .eq('user_id', session.user.id)
           .maybeSingle()
-          
-        const { data: provider } = await Promise.race([
-          providerPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Provider query timeout')), 5000))
-        ])
         
-        if (provider) {
+        if (providerError) {
+          console.error('Provider query error:', providerError)
+          await supabase.auth.signOut()
+          setAppState('landing')
+        } else if (provider) {
           setAppState('dashboard')
         } else {
           // No provider record, sign out
