@@ -11,6 +11,7 @@ interface ReviewAssessmentProps {
 export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessmentProps) {
   const [assessment, setAssessment] = useState<Assessment | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAssessment()
@@ -18,18 +19,47 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
 
   const fetchAssessment = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('assessments')
-      .select('*')
-      .eq('id', assessmentId)
-      .single()
+    setError(null)
+    
+    try {
+      console.log('🔄 Fetching assessment details for:', assessmentId)
+      const startTime = Date.now()
+      
+      // Only fetch the fields we actually need
+      const { data, error } = await supabase
+        .from('assessments')
+        .select(`
+          id,
+          user_id,
+          risk_score,
+          risk_category,
+          inputs,
+          recommendations,
+          status,
+          overall_recommendation,
+          provider_comments,
+          created_at,
+          results,
+          guidelines,
+          disclaimer
+        `)
+        .eq('id', assessmentId)
+        .single()
 
-    if (error) {
-      console.error('Error fetching assessment:', error)
-    } else {
-      setAssessment(data)
+      console.log(`⏱️ Assessment fetch completed in ${Date.now() - startTime}ms`)
+      
+      if (error) {
+        console.error('Error fetching assessment:', error)
+        setError(error.message)
+      } else {
+        setAssessment(data)
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err)
+      setError('Failed to load assessment')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleSaveSuccess = () => {
@@ -65,18 +95,27 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
     return (
       <div className="min-h-screen bg-white flex items-center justify-center font-sans">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">Loading assessment...</p>
+          <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-4 rounded-2xl shadow-lg mx-auto mb-6 w-20 h-20 flex items-center justify-center">
+            <Heart className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-900 font-medium">Loading assessment details...</p>
+          <p className="text-gray-500 text-sm mt-2">This should only take a moment</p>
         </div>
       </div>
     )
   }
 
-  if (!assessment) {
+  if (error || !assessment) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center font-sans">
         <div className="text-center bg-white rounded-xl shadow-lg p-8 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Assessment not found</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {error ? 'Error Loading Assessment' : 'Assessment Not Found'}
+          </h2>
+          {error && (
+            <p className="text-red-600 mb-4">{error}</p>
+          )}
           <button
             onClick={onBack}
             className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all font-semibold h-12"
