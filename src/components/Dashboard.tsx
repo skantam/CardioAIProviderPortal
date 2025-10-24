@@ -29,8 +29,15 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const [searchQuery, setSearchQuery] = useState('')
   const [showChangePassword, setShowChangePassword] = useState(false)
 
+  // Add separate loading state for tab switching
+  const [tabSwitching, setTabSwitching] = useState(false)
+
   useEffect(() => {
-    fetchProvider()
+    // Only fetch provider once on mount
+    if (!provider) {
+      fetchProvider()
+    }
+    // Fetch assessments when tab changes
     fetchAssessments()
   }, [activeTab])
 
@@ -52,14 +59,22 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   }
 
   const fetchAssessments = async () => {
-    if (!refreshing) setLoading(true)
+    // Use different loading states for different actions
+    if (refreshing) {
+      // Already in refresh mode, don't change loading state
+    } else if (activeTab !== (assessments.length > 0 ? 'pending' : 'reviewed')) {
+      // Tab switching - use faster loading state
+      setTabSwitching(true)
+    } else {
+      // Initial load
+      setLoading(true)
+    }
     
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         console.log('No user found')
         setAssessments([])
-        setLoading(false)
         return
       }
 
@@ -73,7 +88,6 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       if (providerError || !providerData) {
         console.error('Error fetching provider:', providerError)
         setAssessments([])
-        setLoading(false)
         return
       }
 
@@ -107,6 +121,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       // Always reset loading states
       setLoading(false)
       setRefreshing(false)
+      setTabSwitching(false)
     }
   }
 
@@ -279,33 +294,37 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => {
+                  if (activeTab === 'pending') return // Don't switch if already on this tab
                   setActiveTab('pending')
                   clearSearch()
                 }}
+                disabled={tabSwitching}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'pending'
                     ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
                     : 'border-transparent text-gray-500 hover:text-blue-600 hover:border-gray-300'
-                }`}
+                } ${tabSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4" />
+                  <Clock className={`w-4 h-4 ${tabSwitching && activeTab !== 'pending' ? 'animate-spin' : ''}`} />
                   <span>Pending Review</span>
                 </div>
               </button>
               <button
                 onClick={() => {
+                  if (activeTab === 'reviewed') return // Don't switch if already on this tab
                   setActiveTab('reviewed')
                   clearSearch()
                 }}
+                disabled={tabSwitching}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'reviewed'
                     ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
                     : 'border-transparent text-gray-500 hover:text-blue-600 hover:border-gray-300'
-                }`}
+                } ${tabSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className={`w-4 h-4 ${tabSwitching && activeTab !== 'reviewed' ? 'animate-spin' : ''}`} />
                   <span>Reviewed</span>
                 </div>
               </button>
@@ -433,10 +452,12 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           )}
         </div>
         {/* Assessments List */}
-        {!showSearchResults && loading ? (
+        {!showSearchResults && (loading || tabSwitching) ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading assessments...</p>
+            <p className="text-gray-600 font-medium">
+              {tabSwitching ? 'Switching tabs...' : 'Loading assessments...'}
+            </p>
           </div>
         ) : !showSearchResults && assessments.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg shadow-sm">
