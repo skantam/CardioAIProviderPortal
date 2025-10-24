@@ -268,6 +268,28 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     }
   }
 
+  const fetchAssessments = async (tab?: 'pending' | 'reviewed', forceRefresh = false) => {
+    if (!providerCountry) {
+      console.log('❌ No provider country available, skipping assessment fetch')
+      return
+    }
+    
+    const targetTab = tab || activeTab
+    try {
+      await fetchAssessmentsWithCountry(targetTab, providerCountry, forceRefresh)
+    } catch (error) {
+      console.error('Error fetching assessments:', error)
+      // Clear loading states on error
+      setTabLoading(prev => ({ ...prev, [targetTab]: false }))
+      if (refreshing) {
+        setRefreshing(false)
+      }
+    } finally {
+      // Ensure loading states are cleared
+      setTabLoading(prev => ({ ...prev, [targetTab]: false }))
+    }
+  }
+
   const handleTabSwitch = async (newTab: 'pending' | 'reviewed') => {
     if (newTab === activeTab) return
     
