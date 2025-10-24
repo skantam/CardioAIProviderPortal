@@ -577,7 +577,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
                             <span className="font-medium">Risk Score: {result.risk_score}</span>
                             <span>
-                              Date: {new Date(result.created_at).toLocaleDateString()}
+                              Date: {formatDate(result.created_at)}
                             </span>
                           </div>
                         </div>
