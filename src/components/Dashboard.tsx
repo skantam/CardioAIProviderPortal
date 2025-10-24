@@ -121,7 +121,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     try {
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout')), 20000)
+        setTimeout(() => reject(new Error('Query timeout')), 30000)
       )
 
       // Determine status based on active tab
@@ -181,7 +181,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       console.error('Error fetching assessments:', error)
       // Show user-friendly error message
       if (error.message === 'Query timeout') {
-        console.error(`❌ Database query timed out after ${Date.now() - startTime}ms - this may indicate slow network or database issues`)
+        console.error(`❌ Database query timed out after 30 seconds - this may indicate slow network or database issues`)
       }
       if (tab === 'pending') setPendingAssessments([])
       else setReviewedAssessments([])
