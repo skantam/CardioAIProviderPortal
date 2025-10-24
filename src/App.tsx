@@ -14,8 +14,18 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    checkAuthState()
-    checkForPasswordReset()
+    const initializeApp = async () => {
+      try {
+        checkForPasswordReset()
+        await checkAuthState()
+      } catch (error) {
+        console.error('App initialization error:', error)
+        setAppState('landing')
+        setLoading(false)
+      }
+    }
+    
+    initializeApp()
   }, [])
 
   const checkForPasswordReset = () => {
@@ -33,18 +43,31 @@ function App() {
     // Skip auth check if we're handling password reset
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.get('type') === 'recovery') {
+      setLoading(false)
       return
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Auth timeout')), 10000)
+      )
+      
+      const authPromise = supabase.auth.getSession()
+      const { data: { session } } = await Promise.race([authPromise, timeoutPromise])
+      
       if (session) {
         // Check if user has a provider record
-        const { data: provider } = await supabase
+        const providerPromise = supabase
           .from('providers')
           .select('id')
           .eq('user_id', session.user.id)
           .maybeSingle()
+          
+        const { data: provider } = await Promise.race([
+          providerPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Provider query timeout')), 5000))
+        ])
         
         if (provider) {
           setAppState('dashboard')
@@ -68,11 +91,18 @@ function App() {
       try {
         if (session) {
           // Check if user has a provider record
-          const { data: provider } = await supabase
+          const { data: provider, error: providerError } = await supabase
             .from('providers')
             .select('id')
             .eq('user_id', session.user.id)
             .maybeSingle()
+          
+          if (providerError) {
+            console.error('Provider query error:', providerError)
+            await supabase.auth.signOut()
+            setAppState('landing')
+            return
+          }
           
           if (provider) {
             setAppState('dashboard')
