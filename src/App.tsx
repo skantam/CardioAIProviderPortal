@@ -14,8 +14,20 @@ function App() {
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const isSupabaseConfiguredCorrectly = () => {
+    const url = import.meta.env.VITE_SUPABASE_URL
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+    
+    return url && 
+           key && 
+           url !== 'your_supabase_url_here' && 
+           key !== 'your_supabase_anon_key_here' &&
+           url.startsWith('https://') &&
+           key.length > 20
+  }
+
   // Check environment configuration first
-  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  if (!isSupabaseConfiguredCorrectly()) {
     return <EnvCheck />
   }
 
