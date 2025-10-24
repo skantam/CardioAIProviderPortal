@@ -19,7 +19,8 @@ interface SearchResult {
 }
 export default function Dashboard({ onLogout, onSelectAssessment }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'pending' | 'reviewed'>('pending')
-  const [assessments, setAssessments] = useState<Assessment[]>([])
+  const [pendingAssessments, setPendingAssessments] = useState<Assessment[]>([])
+  const [reviewedAssessments, setReviewedAssessments] = useState<Assessment[]>([])
   const [loading, setLoading] = useState(true)
   const [provider, setProvider] = useState<any>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -29,17 +30,17 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const [searchQuery, setSearchQuery] = useState('')
   const [showChangePassword, setShowChangePassword] = useState(false)
 
-  // Add separate loading state for tab switching
-  const [tabSwitching, setTabSwitching] = useState(false)
+  // Cache for assessments to avoid refetching
+  const [lastFetchTime, setLastFetchTime] = useState<{pending?: number, reviewed?: number}>({})
+  const CACHE_DURATION = 30000 // 30 seconds
 
   useEffect(() => {
-    // Only fetch provider once on mount
-    if (!provider) {
-      fetchProvider()
-    }
-    // Fetch assessments when tab changes
-    fetchAssessments()
-  }, [activeTab])
+    fetchProvider()
+    fetchAssessments('pending')
+  }, [])
+
+  // Get current assessments based on active tab
+  const currentAssessments = activeTab === 'pending' ? pendingAssessments : reviewedAssessments
 
   const fetchProvider = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -59,15 +60,19 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
     }
   }
 
-  const fetchAssessments = async () => {
-    // Use different loading states for different actions
-    if (refreshing) {
-      // Already in refresh mode, don't change loading state
-    } else if (activeTab !== (assessments.length > 0 ? 'pending' : 'reviewed')) {
-      // Tab switching - use faster loading state
-      setTabSwitching(true)
-    } else {
-      // Initial load
+  const fetchAssessments = async (tab?: 'pending' | 'reviewed', forceRefresh = false) => {
+    const targetTab = tab || activeTab
+    const now = Date.now()
+    const lastFetch = lastFetchTime[targetTab]
+    
+    // Check if we have cached data and it's still fresh
+    if (!forceRefresh && lastFetch && (now - lastFetch) < CACHE_DURATION) {
+      console.log(`Using cached data for ${targetTab} tab`)
+      return
+    }
+
+    // Only show loading for initial load or refresh
+    if (!lastFetch || forceRefresh) {
       setLoading(true)
     }
     
@@ -75,7 +80,8 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         console.log('No user found')
-        setAssessments([])
+        if (targetTab === 'pending') setPendingAssessments([])
+        else setReviewedAssessments([])
         return
       }
 
@@ -88,7 +94,8 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
 
       if (providerError || !providerData) {
         console.error('Error fetching provider:', providerError)
-        setAssessments([])
+        if (targetTab === 'pending') setPendingAssessments([])
+        else setReviewedAssessments([])
         return
       }
 
@@ -96,7 +103,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
       console.log('Provider country:', providerCountry)
 
       // Determine status based on active tab
-      const status = activeTab === 'pending' ? 'pending_review' : 'reviewed'
+      const status = targetTab === 'pending' ? 'pending_review' : 'reviewed'
       console.log('Fetching assessments with status:', status)
 
       // Fetch assessments filtered by country and status
@@ -110,19 +117,25 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
 
       if (assessmentError) {
         console.error('Error fetching assessments:', assessmentError)
-        setAssessments([])
+        if (targetTab === 'pending') setPendingAssessments([])
+        else setReviewedAssessments([])
       } else {
         console.log(`Found ${assessmentData?.length || 0} assessments`)
-        setAssessments(assessmentData || [])
+        if (targetTab === 'pending') {
+          setPendingAssessments(assessmentData || [])
+        } else {
+          setReviewedAssessments(assessmentData || [])
+        }
+        // Update cache timestamp
+        setLastFetchTime(prev => ({ ...prev, [targetTab]: now }))
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
-      setAssessments([])
+      if (targetTab === 'pending') setPendingAssessments([])
+      else setReviewedAssessments([])
     } finally {
-      // Always reset loading states
       setLoading(false)
       setRefreshing(false)
-      setTabSwitching(false)
     }
   }
 
@@ -187,12 +200,24 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
   const handleRefresh = async () => {
     if (refreshing) return // Prevent multiple simultaneous refreshes
     setRefreshing(true)
+    // Clear cache to force refresh
+    setLastFetchTime({})
     try {
-      await fetchAssessments()
+      await fetchAssessments(activeTab, true)
     } catch (error) {
       console.error('Refresh error:', error)
       setRefreshing(false)
     }
+  }
+
+  const handleTabSwitch = async (newTab: 'pending' | 'reviewed') => {
+    if (newTab === activeTab) return
+    
+    setActiveTab(newTab)
+    clearSearch()
+    
+    // Fetch data for the new tab if not cached
+    await fetchAssessments(newTab)
   }
 
   const getRiskColor = (category: string) => {
@@ -276,37 +301,31 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => {
-                  if (activeTab === 'pending') return // Don't switch if already on this tab
-                  setActiveTab('pending')
-                  clearSearch()
+                  handleTabSwitch('pending')
                 }}
-                disabled={tabSwitching}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'pending'
                     ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
                     : 'border-transparent text-gray-500 hover:text-blue-600 hover:border-gray-300'
-                } ${tabSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                }`}
               >
                 <div className="flex items-center space-x-2">
-                  <Clock className={`w-4 h-4 ${tabSwitching && activeTab !== 'pending' ? 'animate-spin' : ''}`} />
+                  <Clock className="w-4 h-4" />
                   <span>Pending Review</span>
                 </div>
               </button>
               <button
                 onClick={() => {
-                  if (activeTab === 'reviewed') return // Don't switch if already on this tab
-                  setActiveTab('reviewed')
-                  clearSearch()
+                  handleTabSwitch('reviewed')
                 }}
-                disabled={tabSwitching}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors rounded-t-lg ${
                   activeTab === 'reviewed'
                     ? 'border-blue-500 text-blue-600 bg-gradient-to-r from-blue-50 to-teal-50'
                     : 'border-transparent text-gray-500 hover:text-blue-600 hover:border-gray-300'
-                } ${tabSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                }`}
               >
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className={`w-4 h-4 ${tabSwitching && activeTab !== 'reviewed' ? 'animate-spin' : ''}`} />
+                  <CheckCircle className="w-4 h-4" />
                   <span>Reviewed</span>
                 </div>
               </button>
@@ -434,14 +453,14 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
           )}
         </div>
         {/* Assessments List */}
-        {!showSearchResults && (loading || tabSwitching) ? (
+        {!showSearchResults && loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">
-              {tabSwitching ? 'Switching tabs...' : 'Loading assessments...'}
+              Loading assessments...
             </p>
           </div>
-        ) : !showSearchResults && assessments.length === 0 ? (
+        ) : !showSearchResults && currentAssessments.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg shadow-sm">
             <FileText className="w-20 h-20 text-gray-300 mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
@@ -456,7 +475,7 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
         ) : !showSearchResults && (
           <div className="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
             <div className="divide-y divide-gray-200">
-              {assessments.map((assessment) => (
+              {currentAssessments.map((assessment) => (
                 <div
                   key={assessment.id}
                   onClick={() => onSelectAssessment(assessment.id)}
