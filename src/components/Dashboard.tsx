@@ -451,6 +451,17 @@ export default function Dashboard({ onLogout, onSelectAssessment }: DashboardPro
                 ? 'No assessments are currently pending review.'
                 : 'No assessments have been reviewed yet.'}
             </p>
+            {debugInfo && (
+              <div className="mt-6 p-4 bg-gray-100 rounded-lg text-left max-w-md mx-auto">
+                <h4 className="font-semibold text-gray-900 mb-2">Debug Info:</h4>
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p><strong>Your Country:</strong> {debugInfo.providerCountry}</p>
+                  <p><strong>Available Countries:</strong> {debugInfo.availableCountries.join(', ') || 'None'}</p>
+                  <p><strong>Available Statuses:</strong> {debugInfo.availableStatuses.join(', ') || 'None'}</p>
+                  <p><strong>Total Assessments:</strong> {debugInfo.totalAssessments}</p>
+                </div>
+              </div>
+            )}
           </div>
         ) : !showSearchResults && (
           <div className="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
