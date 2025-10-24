@@ -12,12 +12,20 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
   const [assessment, setAssessment] = useState<Assessment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [requestId, setRequestId] = useState(0)
 
   useEffect(() => {
     fetchAssessment()
+    
+    // Cleanup function to cancel any pending requests
+    return () => {
+      setRequestId(prev => prev + 1)
+    }
   }, [assessmentId])
 
   const fetchAssessment = async () => {
+    const currentRequestId = Date.now()
+    setRequestId(currentRequestId)
     setLoading(true)
     setError(null)
     
@@ -25,40 +33,39 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
       console.log('🔄 Fetching assessment details for:', assessmentId)
       const startTime = Date.now()
       
-      // Only fetch the fields we actually need
+      // Fetch minimal fields first for faster initial load
       const { data, error } = await supabase
         .from('assessments')
-        .select(`
-          id,
-          user_id,
-          risk_score,
-          risk_category,
-          inputs,
-          recommendations,
-          status,
-          overall_recommendation,
-          provider_comments,
-          created_at,
-          results,
-          guidelines,
-          disclaimer
-        `)
+        .select('id, user_id, risk_score, risk_category, inputs, recommendations, status, overall_recommendation, provider_comments, created_at, results, guidelines, disclaimer')
         .eq('id', assessmentId)
         .single()
 
       console.log(`⏱️ Assessment fetch completed in ${Date.now() - startTime}ms`)
       
+      // Check if this request is still current
+      if (currentRequestId !== requestId) {
+        console.log('🚫 Request cancelled - newer request in progress')
+        return
+      }
+      
       if (error) {
         console.error('Error fetching assessment:', error)
         setError(error.message)
       } else {
+        console.log('✅ Assessment data loaded successfully')
         setAssessment(data)
       }
     } catch (err) {
       console.error('Unexpected error:', err)
-      setError('Failed to load assessment')
+      // Check if this request is still current before setting error
+      if (currentRequestId === requestId) {
+        setError('Failed to load assessment. Please try again.')
+      }
     } finally {
-      setLoading(false)
+      // Only clear loading if this request is still current
+      if (currentRequestId === requestId) {
+        setLoading(false)
+      }
     }
   }
 
@@ -99,8 +106,14 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
             <Heart className="w-8 h-8 text-white animate-pulse" />
           </div>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">Loading assessment details...</p>
-          <p className="text-gray-500 text-sm mt-2">This should only take a moment</p>
+          <p className="text-gray-900 font-medium">Loading Assessment {assessmentId.substring(0, 8).toUpperCase()}...</p>
+          <p className="text-gray-500 text-sm mt-2">Fetching patient data and recommendations</p>
+          <button
+            onClick={onBack}
+            className="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm underline"
+          >
+            Cancel and go back
+          </button>
         </div>
       </div>
     )
@@ -116,12 +129,23 @@ export default function ReviewAssessment({ assessmentId, onBack }: ReviewAssessm
           {error && (
             <p className="text-red-600 mb-4">{error}</p>
           )}
-          <button
-            onClick={onBack}
-            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all font-semibold h-12"
-          >
-            Go back to dashboard
-          </button>
+          <div className="space-x-4">
+            <button
+              onClick={() => {
+                setError(null)
+                fetchAssessment()
+              }}
+              className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-all font-semibold h-12"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={onBack}
+              className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-all font-semibold h-12"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     )
